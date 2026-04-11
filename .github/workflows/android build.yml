@@ -1,14 +1,16 @@
 name: Android Build
+
 on:
   push:
     branches: [ "main", "master" ]
-  workflow_dispatch: # هذا يسمح لك بتشغيل البناء يدوياً للتجربة
+  workflow_dispatch: # يسمح بتشغيل البناء يدوياً من تبويب Actions
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -21,5 +23,11 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        # أضفنا --info لنعرف بالضبط أين يسقط البناء
-        run: ./gradlew assembleDebug --no-daemon --info
+        # قمت بتعديل الأمر ليعطيك تفاصيل الخطأ بوضوح إذا فشل
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
