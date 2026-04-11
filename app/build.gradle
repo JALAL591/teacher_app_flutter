@@ -4,11 +4,13 @@ plugins {
 }
 
 android {
-    namespace 'com.example.myapp'
+    // التعديل هنا: يجب أن يكون com.edu.teacher ليتوافق مع الـ Manifest والكود
+    namespace 'com.edu.teacher' 
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.myapp"
+        // التعديل هنا: ليكون هذا هو معرف التطبيق الرسمي
+        applicationId "com.edu.teacher" 
         minSdk 24
         targetSdk 34
         versionCode 1
