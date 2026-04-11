@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:padding="20dp">
+
+    <!-- رأس البطاقة -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginBottom="20dp">
+
+        <LinearLayout
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="@drawable/student_avatar_bg_large"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/studentInitial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="أ"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/studentName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="أحمد محمد"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#1E293B"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:id="@+id/studentGrade"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="الأول الابتدائي • أ"
+            android:textSize="12sp"
+            android:textColor="#64748B"
+            android:layout_marginTop="4dp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="#FEF3C7"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⭐"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/studentPoints"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="85 نقطة"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#F59E0B"
+                android:layout_marginStart="4dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- الأنشطة السابقة -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📅 الأنشطة السابقة"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#64748B"
+        android:layout_marginBottom="12dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/historyRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false" />
+
+</LinearLayout>
