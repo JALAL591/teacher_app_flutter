@@ -18,7 +18,6 @@ class BottomNav @JvmOverloads constructor(
     private var onItemSelectedListener: ((Int) -> Unit)? = null
     private var currentPosition = 0
 
-    // تم استخدام String للأيقونات (Emojis) بدلاً من Drawable لتجنب خطأ "Resource Not Found"
     data class TabItem(val path: String, val icon: String, val label: String)
 
     private val tabs = listOf(
@@ -29,60 +28,65 @@ class BottomNav @JvmOverloads constructor(
     )
 
     init {
-        // التأكد من أن ملف bottom_nav.xml موجود في مجلد res/layout
         LayoutInflater.from(context).inflate(R.layout.bottom_nav, this, true)
-        setupTabs()
+        // استخدام post لضمان أن النظام انتهى من رسم الواجهة قبل تشغيل setupTabs
+        post {
+            setupTabs()
+        }
     }
 
     private fun setupTabs() {
         val container = findViewById<LinearLayout>(R.id.tabsContainer)
         val addButton = findViewById<MaterialButton>(R.id.addButton)
 
-        addButton.setOnClickListener {
-            onItemSelectedListener?.invoke(-1) // رقم -1 يشير إلى زر الإضافة (+)
+        // إضافة ? لمنع الانهيار إذا لم يجد الزر
+        addButton?.setOnClickListener {
+            onItemSelectedListener?.invoke(-1)
         }
 
+        // تنظيف الحاوية لمنع تكرار العناصر عند إعادة التشغيل
+        container?.removeAllViews()
+
         tabs.forEachIndexed { index, tab ->
-            // نفخ (Inflate) عنصر القائمة الفردي
             val tabView = LayoutInflater.from(context).inflate(R.layout.bottom_nav_item, container, false)
             val iconView = tabView.findViewById<TextView>(R.id.iconView)
             val labelView = tabView.findViewById<TextView>(R.id.labelView)
 
-            iconView.text = tab.icon
-            labelView.text = tab.label
+            // تعبئة البيانات مع حماية ضد الـ Null
+            iconView?.text = tab.icon
+            labelView?.text = tab.label
 
             tabView.setOnClickListener {
                 setActiveTab(index)
                 onItemSelectedListener?.invoke(index)
             }
 
-            container.addView(tabView)
+            container?.addView(tabView)
         }
         
-        // تعيين التبويب الأول كنشط افتراضياً
         setActiveTab(0)
     }
 
     fun setActiveTab(position: Int) {
         currentPosition = position
-        val container = findViewById<LinearLayout>(R.id.tabsContainer)
+        val container = findViewById<LinearLayout>(R.id.tabsContainer) ?: return
         
         for (i in 0 until container.childCount) {
             val tabView = container.getChildAt(i)
-            val iconView = tabView.findViewById<TextView>(R.id.iconView)
-            val labelView = tabView.findViewById<TextView>(R.id.labelView)
+            // استخدام ? بعد اسم المتغير هو أهم تعديل لمنع الانهيار (Crash Safe)
+            val iconView = tabView?.findViewById<TextView>(R.id.iconView)
+            val labelView = tabView?.findViewById<TextView>(R.id.labelView)
             
             if (i == position) {
-                // استخدام ContextCompat لجلب الألوان بشكل آمن وتجنب مشاكل النسخ القديمة
                 val activeColor = ContextCompat.getColor(context, R.color.indigo_600)
-                iconView.setTextColor(activeColor)
-                labelView.setTextColor(activeColor)
-                labelView.alpha = 1f
+                iconView?.setTextColor(activeColor)
+                labelView?.setTextColor(activeColor)
+                labelView?.alpha = 1f
             } else {
                 val inactiveColor = ContextCompat.getColor(context, R.color.slate_400)
-                iconView.setTextColor(inactiveColor)
-                labelView.setTextColor(inactiveColor)
-                labelView.alpha = 0.6f
+                iconView?.setTextColor(inactiveColor)
+                labelView?.setTextColor(inactiveColor)
+                labelView?.alpha = 0.6f
             }
         }
     }
