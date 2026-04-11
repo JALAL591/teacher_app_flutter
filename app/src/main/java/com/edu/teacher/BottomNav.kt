@@ -39,44 +39,51 @@ class BottomNav @JvmOverloads constructor(
         val container = findViewById<LinearLayout>(R.id.tabsContainer)
         val addButton = findViewById<MaterialButton>(R.id.addButton)
 
-        // إضافة ? لمنع الانهيار إذا لم يجد الزر
+        // إعداد زر الإضافة
         addButton?.setOnClickListener {
             onItemSelectedListener?.invoke(-1)
         }
 
-        // تنظيف الحاوية لمنع تكرار العناصر عند إعادة التشغيل
-        container?.removeAllViews()
+        // التأكد من وجود الحاوية قبل المتابعة
+        if (container == null) {
+            android.util.Log.e("BottomNav", "tabsContainer not found!")
+            return
+        }
 
+        // إضافة التبويبات الأربعة (بدون مسح الحاوية)
         tabs.forEachIndexed { index, tab ->
             val tabView = LayoutInflater.from(context).inflate(R.layout.bottom_nav_item, container, false)
             val iconView = tabView.findViewById<TextView>(R.id.iconView)
             val labelView = tabView.findViewById<TextView>(R.id.labelView)
 
-            // تعبئة البيانات مع حماية ضد الـ Null
+            // تعبئة البيانات
             iconView?.text = tab.icon
             labelView?.text = tab.label
 
+            // إعداد حدث النقر
             tabView.setOnClickListener {
                 setActiveTab(index)
                 onItemSelectedListener?.invoke(index)
             }
 
-            container?.addView(tabView)
+            // إضافة التبويب إلى الحاوية
+            container.addView(tabView)
         }
-        
+
+        // تفعيل التبويب الأول
         setActiveTab(0)
     }
 
     fun setActiveTab(position: Int) {
         currentPosition = position
         val container = findViewById<LinearLayout>(R.id.tabsContainer) ?: return
-        
+
         for (i in 0 until container.childCount) {
             val tabView = container.getChildAt(i)
-            // استخدام ? بعد اسم المتغير هو أهم تعديل لمنع الانهيار (Crash Safe)
+            // استخدام safe call لمنع الانهيار
             val iconView = tabView?.findViewById<TextView>(R.id.iconView)
             val labelView = tabView?.findViewById<TextView>(R.id.labelView)
-            
+
             if (i == position) {
                 val activeColor = ContextCompat.getColor(context, R.color.indigo_600)
                 iconView?.setTextColor(activeColor)
