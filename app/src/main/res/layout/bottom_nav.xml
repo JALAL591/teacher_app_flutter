@@ -13,22 +13,29 @@
         android:layout_height="1dp"
         android:background="#E2E8F0" />
 
+    <!-- صف التنقل الرئيسي -->
     <LinearLayout
-        android:id="@+id/tabsContainer"
         android:layout_width="match_parent"
         android:layout_height="65dp"
         android:orientation="horizontal"
-        android:gravity="center"
+        android:gravity="center_vertical"
         android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:clipToPadding="false">
+        android:paddingEnd="8dp">
 
-        <!-- زر الإضافة في المنتصف -->
+        <!-- حاوية التبويبات الديناميكية (ستُملأ بالكود) -->
+        <LinearLayout
+            android:id="@+id/tabsContainer"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center" />
+
+        <!-- زر الإضافة (خارج حاوية التبويبات حتى لا يتم مسحه) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/addButton"
             android:layout_width="56dp"
             android:layout_height="56dp"
-            android:layout_gravity="center"
             android:backgroundTint="#4F46E5"
             app:cornerRadius="28dp"
             android:elevation="8dp"
