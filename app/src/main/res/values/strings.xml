@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">تطبيق المعلم</string>
+    <string name="teacher_dashboard">لوحة التحكم</string>
+    <string name="students">الطلاب</string>
+    <string name="classes">الفصول</string>
+    <string name="points">النقاط</string>
+    <string name="broadcast">بث</string>
+    <string name="settings">الإعدادات</string>
+    <string name="logout">تسجيل الخروج</string>
+    <string name="server_running">الرادار يعمل</string>
+    <string name="server_stopped">الرادار متوقف</string>
+    <string name="connected_students">الطلاب المتصلون</string>
+    <string name="add_class">إضافة فصل</string>
+    <string name="add_lesson">إضافة درس</string>
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="delete">حذف</string>
+    <string name="edit">تعديل</string>
+    <string name="yes">نعم</string>
+    <string name="no">لا</string>
+</resources>
