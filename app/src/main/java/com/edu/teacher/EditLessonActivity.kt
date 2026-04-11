@@ -185,7 +185,7 @@ class EditLessonActivity : AppCompatActivity() {
             titleInput.setText(currentLesson.optString("title", ""))
             contentInput.setText(currentLesson.optString("content", ""))
             
-            val imageUrl = currentLesson.optString("image", ")
+            val imageUrl = currentLesson.optString("image", "")
             if (imageUrl != null && imageUrl.isNotEmpty()) {
                 Glide.with(this).load(imageUrl).into(imagePreview)
                 imagePreview.visibility = View.VISIBLE
