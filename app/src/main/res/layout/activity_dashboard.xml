@@ -224,10 +224,11 @@
 
     </LinearLayout>
 
-    <!-- محتوى قابل للتمرير -->
+    <!-- محتوى قابل للتمرير - المعدل -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:padding="16dp">
 
         <LinearLayout
