@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Login Logo Circle -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+
+    <gradient
+        android:type="radial"
+        android:gradientRadius="60dp"
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:startColor="#FFFFFF"
+        android:endColor="#E0E7FF" />
+
+    <stroke
+        android:width="3dp"
+        android:color="#33FFFFFF" />
+
+</shape>

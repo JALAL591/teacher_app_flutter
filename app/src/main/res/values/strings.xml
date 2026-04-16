@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ===== App Name ===== -->
+    <string name="app_name">تطبيق المعلم الذكي</string>
+
+    <!-- ===== Navigation ===== -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_students">الطلاب</string>
+    <string name="nav_students_stats">إحصائيات الطلاب</string>
+    <string name="nav_add_lesson">إضافة درس</string>
+    <string name="nav_attendance">حضور وغياب</string>
+    <string name="nav_stats">الإحصائيات</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="bottom_nav_preview_text">شريط التنقل</string>
+
+    <!-- ===== Page Titles ===== -->
+    <string name="title_dashboard">لوحة التحكم</string>
+    <string name="title_settings">الإعدادات</string>
+    <string name="title_students">الطلاب</string>
+    <string name="title_sync">المزامنة</string>
+    <string name="title_edit_lesson">تعديل وبث الدرس</string>
+    <string name="title_add_class">إنشاء فصل جديد</string>
+    <string name="title_add_lesson">إضافة درس وواجب</string>
+
+    <!-- ===== Stats Labels ===== -->
+    <string name="stat_students">طلاب</string>
+    <string name="stat_classes">فصول</string>
+    <string name="stat_points">نقاط</string>
+    <string name="stat_students_value">0</string>
+    <string name="stat_students_label">طلاب</string>
+    <string name="stat_classes_value">0</string>
+    <string name="stat_classes_label">فصول</string>
+    <string name="stat_points_value">0</string>
+    <string name="stat_points_label">نقاط</string>
+
+    <!-- ===== Classes Section ===== -->
+    <string name="classes_label">الفصول الدراسية</string>
+    <string name="section_classes">الفصول الدراسية</string>
+    <string name="text_no_classes">لا توجد فصول</string>
+    <string name="default_class">فصل</string>
+    <string name="default_subject">مادة</string>
+    <string name="default_teacher">المعلم</string>
+    <string name="default_id">غير محدد</string>
+    <string name="text_students_count">%1$s \u2022 %2$d طالب</string>
+    <string name="text_student_details">%1$s \u2022 %2$s طالب</string>
+    <string name="text_classes_count">%1$d فصول</string>
+    <string name="text_active_classes">%1$d فصول نشطة</string>
+    <string name="text_manage_attendance">إدارة الحضور والنقاط</string>
+
+    <!-- ===== Greetings ===== -->
+    <string name="greeting_teacher">أهلاً، %1$s \uD83D\uDC4B</string>
+    <string name="subtitle_dashboard">تحكم في فصولك وتابع طلابك</string>
+    <string name="welcome_teacher">أهلاً بك أستاذ %1$s! معرفك: %2$s</string>
+
+    <!-- ===== Teacher ID Card ===== -->
+    <string name="label_teacher_code">كود الربط الخاص بك</string>
+    <string name="btn_copy">نسخ</string>
+    <string name="toast_copied_id">\u2705 تم نسخ المعرف</string>
+
+    <!-- ===== Hotspot ===== -->
+    <string name="btn_hotspot">تنشيط نقطة اتصال الطلاب</string>
+
+    <!-- ===== Grade Levels ===== -->
+    <string-array name="grade_levels">
+        <item>الأول الابتدائي</item>
+        <item>الثاني الابتدائي</item>
+        <item>الثالث الابتدائي</item>
+        <item>الرابع الابتدائي</item>
+        <item>الخامس الابتدائي</item>
+        <item>السادس الابتدائي</item>
+        <item>الأول المتوسط</item>
+        <item>الثاني المتوسط</item>
+        <item>الثالث المتوسط</item>
+        <item>الأول الثانوي</item>
+        <item>الثاني الثانوي</item>
+        <item>الثالث الثانوي</item>
+    </string-array>
+
+    <!-- ===== Section Letters ===== -->
+    <string-array name="section_letters">
+        <item>أ</item>
+        <item>ب</item>
+        <item>ج</item>
+        <item>د</item>
+        <item>هـ</item>
+    </string-array>
+
+    <!-- ===== Unit Names ===== -->
+    <string-array name="unit_names">
+        <item>الوحدة الأولى</item>
+        <item>الوحدة الثانية</item>
+        <item>الوحدة الثالثة</item>
+        <item>الوحدة الرابعة</item>
+        <item>الوحدة الخامسة</item>
+        <item>الوحدة السادسة</item>
+    </string-array>
+
+    <!-- ===== Question Types ===== -->
+    <string name="question_type_mcq">اختيارات</string>
+    <string name="question_type_tf">صح/خطأ</string>
+    <string name="question_type_essay">مقالي</string>
+    <string name="answer_true">صح</string>
+    <string name="answer_false">خطأ</string>
+    <string name="question_label">سؤال %1$d</string>
+    <string name="option_1">الخيار 1</string>
+    <string name="option_2">الخيار 2</string>
+
+    <string-array name="question_types">
+        <item>وضع الاختيارات (MCQ)</item>
+        <item>وضع صح أو خطأ</item>
+    </string-array>
+
+    <string-array name="mcq_fix_entries">
+        <item>الخيار الأول هو الصحيح</item>
+        <item>الخيار الثاني هو الصحيح</item>
+    </string-array>
+
+    <!-- ===== Dialog Titles ===== -->
+    <string name="dialog_logout">تسجيل الخروج</string>
+    <string name="dialog_delete_class">حذف الفصل</string>
+    <string name="dialog_delete_lesson">حذف الدرس</string>
+    <string name="dialog_publish_lesson">بث الدرس</string>
+    <string name="dialog_factory_reset">إعادة ضبط المصنع</string>
+
+    <!-- ===== Dialog Messages ===== -->
+    <string name="msg_confirm_logout">هل أنت متأكد؟</string>
+    <string name="msg_confirm_logout_detailed">هل تريد تسجيل الخروج؟</string>
+    <string name="msg_confirm_delete_class">هل أنت متأكد من حذف %1$s؟</string>
+    <string name="msg_confirm_delete_lesson">سيتم حذف %1$s من تطبيق الطالب نهائياً؟</string>
+    <string name="msg_confirm_publish">هل أنت متأكد من بث %1$s للطلاب؟</string>
+    <string name="msg_confirm_factory_reset">سيتم مسح كل بيانات الطلاب والصفوف! هل أنت متأكد؟</string>
+
+    <!-- ===== Dialog Buttons ===== -->
+    <string name="btn_yes">نعم</string>
+    <string name="btn_no">إلغاء</string>
+    <string name="btn_delete">حذف</string>
+    <string name="btn_publish">بث</string>
+    <string name="btn_cancel">إلغاء الأمر</string>
+    <string name="btn_save">حفظ البيانات</string>
+    <string name="btn_edit">تعديل</string>
+    <string name="btn_back">&#x2192;</string>
+    <string name="btn_add">+</string>
+    <string name="btn_add_choice">اختيار</string>
+    <string name="btn_add_boolean">صح/خطأ</string>
+    <string name="btn_add_essay">مقالي</string>
+    <string name="btn_add_lesson">إضافة درس</string>
+    <string name="btn_copy_id">نسخ الكود</string>
+
+    <!-- ===== Settings ===== -->
+    <string name="label_approved_teacher">حساب المعلم المعتمد \u2713</string>
+    <string name="label_teacher_name">الاسم المعتمد</string>
+    <string name="hint_teacher_name">اسم المعلم</string>
+    <string name="label_password">كلمة المرور</string>
+    <string name="hint_password">تحديث كلمة المرور</string>
+    <string name="btn_save_changes">\uD83D\uDCBE حفظ التعديلات</string>
+    <string name="btn_save_success">\u2713 تم حفظ البيانات</string>
+    <string name="toast_settings_saved">\u2705 تم حفظ الإعدادات بنجاح</string>
+    <string name="btn_logout">تسجيل الخروج</string>
+    <string name="btn_factory_reset">إعادة ضبط المصنع</string>
+
+    <!-- ===== Toast Messages - Success ===== -->
+    <string name="toast_class_added">\u2705 تم إضافة الفصل بنجاح</string>
+    <string name="toast_class_deleted">\u2705 تم حذف الفصل</string>
+    <string name="toast_lesson_deleted">\u2705 تم حذف الدرس</string>
+    <string name="toast_lesson_published">\u2705 تم بث الدرس بنجاح!</string>
+    <string name="toast_lesson_updated">\u2705 تم تحديث الدرس بنجاح</string>
+    <string name="toast_pdf_attached">\u2705 تم إرفاق ملف الدرس</string>
+    <string name="toast_section_selected">تم اختيار شعبة %1$s</string>
+    <string name="toast_students_fetched">تم جلب %1$d طالب</string>
+    <string name="toast_sync_result">\u2705 %1$d سجل - آخر: %2$s</string>
+    <string name="toast_present">\u2705 حاضر</string>
+    <string name="toast_absent">\u274C غائب</string>
+    <string name="toast_copied_id_success">\u2705 تم نسخ المعرف</string>
+
+    <!-- ===== Toast Messages - Error/Warning ===== -->
+    <string name="error_teacher_not_found">\u274C بيانات المعلم غير موجودة</string>
+    <string name="error_image_load">\u274C خطأ في تحميل الصورة</string>
+    <string name="error_teacher_data">\u274C خطأ: بيانات المعلم غير موجودة</string>
+    <string name="error_lesson_not_found">تعذر العثور على الدرس</string>
+    <string name="warning_select_grade">\u26A0\uFE0F يرجى اختيار الصف</string>
+    <string name="warning_add_class_first">\u26A0\uFE0F يرجى إضافة فصل أولاً</string>
+    <string name="warning_enter_lesson_title">\u26A0\uFE0F يرجى كتابة عنوان الدرس</string>
+    <string name="warning_select_class">\u26A0\uFE0F يرجى اختيار الفصل</string>
+    <string name="warning_enter_subject">يرجى كتابة اسم المادة</string>
+    <string name="warning_enter_name_short">الاسم قصير جداً (3 أحرف على الأقل)</string>
+    <string name="warning_password_short">كلمة المرور يجب أن تكون 4 رموز على الأقل</string>
+
+    <!-- ===== Input Hints ===== -->
+    <string name="hint_question_text">اكتب نص السؤال هنا...</string>
+    <string name="hint_lesson_title">عنوان الدرس</string>
+    <string name="hint_lesson_content">اكتب الشرح هنا...</string>
+    <string name="label_correct_answer">تحديد الإجابة الصحيحة:</string>
+    <string name="toast_pdf_selected">تم إرفاق الملف بنجاح</string>
+    <string name="add_pdf_file">إرفاق ملف PDF من الهاتف</string>
+    <string name="login_privacy_note">سيتم استخدام بياناتك فقط لأغراض التطبيق</string>
+    <string name="login_subtitle">سجل دخولك للمتابعة</string>
+    <string name="login_button_text">دخول</string>
+    <string name="hint_full_name">الاسم الكامل</string>
+    <string name="dashboard_subtitle">المعلم الذكي</string>
+    <string name="btn_hotspot_full">تنشيط نقطة اتصال الطلاب</string>
+    <string name="section_classes_full">الفصول الدراسية</string>
+    <string name="title_add_class_new">فصل جديد</string>
+    <string name="label_subject_name">اسم المادة الدراسية</string>
+    <string name="hint_subject_example">مثال: رياضيات</string>
+    <string name="label_grade_stage">المرحلة الدراسية</string>
+    <string name="label_section_name">الشعبة</string>
+    <string name="btn_create_class">إنشاء الفصل</string>
+    <string name="section_drafts">المسودات</string>
+    <string name="section_published">منشور للطلاب</string>
+    <string name="label_unit_name">الوحدة</string>
+    <string name="btn_publish_short">بث</string>
+    <string name="label_published_check">منشور &#x2713;</string>
+    <string name="title_new_lesson">درس جديد</string>
+    <string name="label_attachments_title">المرفقات</string>
+    <string name="btn_attach_pdf">إرفاق ملف PDF</string>
+    <string name="label_questions_title">الأسئلة</string>
+    <string name="btn_add_choice_short">اختيار</string>
+    <string name="btn_add_boolean_short">صح/خطأ</string>
+    <string name="btn_add_essay_short">مقالي</string>
+    <string name="label_lesson_content_title">محتوى الدرس</string>
+    <string name="hint_lesson_content_full">اكتب الشرح هنا...</string>
+    <string name="label_class_target">الفصل الدراسي</string>
+    <string name="label_unit_target">الوحدة</string>
+    <string name="hint_lesson_title_full">عنوان الدرس</string>
+    <string name="title_stats_page">الإحصائيات</string>
+    <string name="hint_search_students">ابحث عن طالب...</string>
+    <string name="emoji_check_mark">&#x2713;</string>
+    <string name="emoji_cross_mark">&#x2717;</string>
+    <string name="settings_label_name">الاسم</string>
+    <string name="settings_label_password">كلمة المرور</string>
+    <string name="settings_label_night_mode">الوضع الليلي</string>
+    <string name="settings_label_notifications">الإشعارات</string>
+    <string name="settings_label_dark_mode">الوضع الليلي</string>
+    <string name="btn_save_settings">حفظ الإعدادات</string>
+    <string name="btn_logout_text">تسجيل الخروج</string>
+    <string name="btn_factory_reset_text">إعادة ضبط المصنع</string>
+    <string name="title_connected_students">الطلاب المتصلون</string>
+    <string name="radar_status_stopped">الرادار متوقف</string>
+    <string name="radar_status_running">الرادار يعمل بنجاح</string>
+    <string name="btn_activate_radar">تنشيط</string>
+    <string name="btn_stop_radar">إيقاف الرادار</string>
+    <string name="btn_start_radar">تنشيط الرادار</string>
+    <string name="label_connected_now">متصل الآن</string>
+
+    <!-- ===== Status Texts ===== -->
+    <string name="status_publishing">\uD83D\uDCE1 جاري بث الدرس: %1$s</string>
+    <string name="status_video_ready">\uD83C\uDFE5 فيديو جاهز</string>
+    <string name="status_saving">جاري الحفظ...</string>
+    <string name="status_syncing">\u23F3 جاري...</string>
+    <string name="status_sync_button">\uD83D\uDD04</string>
+    <string name="subtitle_follow_students">متابعة الطلاب</string>
+
+    <!-- ===== Empty States ===== -->
+    <string name="empty_students">أضف فصولاً جديدة لبدء إدارة الطلاب</string>
+    <string name="empty_no_students">لا يوجد طلاب بعد</string>
+
+    <!-- ===== Attendance ===== -->
+    <string name="attendance_present">حاضر</string>
+    <string name="attendance_absent">غائب</string>
+    <string name="points_format">%1$d نقطة</string>
+
+    <!-- ===== Mock Data ===== -->
+    <string name="mock_student_1">أحمد محمد</string>
+    <string name="mock_student_2">فاطمة علي</string>
+    <string name="mock_student_3">يوسف حسن</string>
+    <string name="mock_student_4">سارة خالد</string>
+    <string name="mock_grade">الأول</string>
+    <string name="mock_section">أ</string>
+    <string name="mock_subject_math">الرياضيات</string>
+    <string name="mock_subject_science">العلوم</string>
+    <string name="mock_lesson_math">جمع الكسور</string>
+    <string name="mock_lesson_science">الجهاز الهضمي</string>
+    <string name="default_student">طالب</string>
+    <string name="default_activity">نشاط</string>
+
+    <!-- ===== Lesson ===== -->
+    <string name="label_lesson_id">ID: %1$s</string>
+    <string name="default_lesson_title">بدون عنوان</string>
+    <string name="label_lesson_content">محتوى الدرس</string>
+    <string name="title_lesson_details">تفاصيل الدرس</string>
+    <string name="btn_share">مشاركة</string>
+    <string name="btn_broadcast">بث للطلاب</string>
+    <string name="error_loading_lesson">خطأ في تحميل الدرس</string>
+    <string name="error_deleting_lesson">خطأ في حذف الدرس</string>
+    <string name="msg_no_content">لا يوجد محتوى لهذا الدرس</string>
+    <string name="sample_lesson_content">هنا يظهر محتوى الدرس الذي أضفته. يمكنك تعديل هذا النص من صفحة التعديل.</string>
+    <string name="share_lesson_title">درس: %1$s</string>
+    <string name="share_lesson_unit">الوحدة: %1$s</string>
+    <string name="share_lesson_footer">\u2014 تم مشاركته من تطبيق المعلم الذكي</string>
+    <string name="share_subject">درس: %1$s</string>
+    <string name="share_chooser_title">شارك الدرس</string>
+    <string name="label_attachments">\uD83D\uDCCE المرفقات</string>
+    <string name="label_video">فيديو</string>
+    <string name="label_images">الصور</string>
+    <string name="btn_previous">السابق</string>
+    <string name="btn_next">التالي</string>
+    <string name="btn_play">تشغيل</string>
+    <string name="msg_no_pdf">لا يوجد ملف PDF</string>
+    <string name="msg_no_video">لا يوجد فيديو</string>
+    <string name="error_loading_video">خطأ في تحميل الفيديو</string>
+    <string name="error_pdf_copy">خطأ في نسخ ملف PDF</string>
+    <string name="label_pdf_file">ملف PDF</string>
+    <string name="msg_tap_to_open_pdf">اضغط لفتح الملف</string>
+
+    <!-- ===== Server Status ===== -->
+    <string name="server_running">الرادار يعمل بنجاح</string>
+    <string name="server_stopped">الرادار متوقف حالياً</string>
+    <string name="connected_students">الطلاب المتصلون</string>
+
+    <!-- ===== Labels ===== -->
+    <string name="label_target_class">الفصل الدراسي المستهدف</string>
+    <string name="label_unit">الوحدة</string>
+    <string name="label_change_image">تغيير الصورة</string>
+    <string name="label_add_video">إضافة فيديو</string>
+    <string name="label_questions">&#x2753; الأسئلة</string>
+    <string name="label_stat_item">عنصر</string>
+    <string name="label_subject">المادة</string>
+    <string name="label_grade">الصف</string>
+    <string name="label_section">الشعبة</string>
+    <string name="label_draft">مسودة</string>
+    <string name="label_live_for_students">منشور للطلاب</string>
+    <string name="label_choice">اختيار</string>
+    <string name="label_previous_activities">النشاطات السابقة</string>
+    <string name="label_homework_attachment">ملف الواجب</string>
+    <string name="label_quiz_answers">إجابات الاختبار</string>
+    <string name="label_zoomed_image">معاينة الصورة</string>
+    <string name="label_add_new_subject">أضف مادة جديدة</string>
+    <string name="help_class_created">تم إنشاء الفصل بنجاح</string>
+
+    <!-- ===== Sample Data ===== -->
+    <string name="student_initial">ط</string>
+    <string name="sample_student_name">اسم الطالب</string>
+    <string name="sample_student_grade">الصف الأول</string>
+    <string name="sample_lesson_title">عنوان الدرس</string>
+    <string name="sample_student_details">الصف الأول - شعبة أ</string>
+    <string name="sample_points">0 نقطة</string>
+    <string name="sample_date">2024-01-01</string>
+    <string name="sample_question_number">سؤال 1</string>
+    <string name="sample_quiz_question">نص السؤال</string>
+    <string name="sample_quiz_answer">الإجابة</string>
+
+    <!-- ===== Accessibility ===== -->
+    <string name="desc_student_points">نقاط الطالب</string>
+    <string name="desc_student_avatar">أفاتار الطالب</string>
+    <string name="desc_student_name">اسم الطالب</string>
+    <string name="desc_student_details">تفاصيل الطالب</string>
+    <string name="desc_subject_icon">أيقونة المادة</string>
+    <string name="desc_subject_name">اسم المادة</string>
+    <string name="desc_subject_subtitle">تفاصيل المادة</string>
+    <string name="desc_subject_count">عدد الفصول</string>
+    <string name="desc_stats_number">قيمة الإحصاء</string>
+    <string name="desc_stats_label">تسمية الإحصاء</string>
+    <string name="desc_class_icon">أيقونة الفصل</string>
+    <string name="desc_lesson_image">صورة الدرس</string>
+    <string name="desc_file_icon">أيقونة ملف</string>
+    <string name="desc_present_button">تسجيل حضور</string>
+    <string name="desc_absent_button">تسجيل غياب</string>
+    <string name="desc_homework_image">صورة الواجب</string>
+
+    <!-- ===== Emoji Unicode (safe) ===== -->
+    <string name="emoji_person">&#x1F464;</string>
+    <string name="emoji_home">&#x1F3E0;</string>
+    <string name="emoji_students">&#x1F465;</string>
+    <string name="emoji_people">&#x1F465;</string>
+    <string name="emoji_add">&#x2795;</string>
+    <string name="emoji_stats">&#x1F4CA;</string>
+    <string name="emoji_settings">&#x2699;&#xFE0F;</string>
+    <string name="emoji_wave">&#x1F44B;</string>
+    <string name="emoji_success">&#x2705;</string>
+    <string name="emoji_error">&#x274C;</string>
+    <string name="emoji_warning">&#x26A0;&#xFE0F;</string>
+    <string name="emoji_sync">&#x1F504;</string>
+    <string name="emoji_hourglass">&#x23F3;</string>
+    <string name="emoji_broadcast">&#x1F4E1;</string>
+    <string name="emoji_video">&#x1F3A5;</string>
+    <string name="emoji_moon">&#x1F319;</string>
+    <string name="emoji_sun">&#x2600;&#xFE0F;</string>
+    <string name="emoji_save">&#x1F4BE;</string>
+    <string name="emoji_check">&#x2713;</string>
+    <string name="emoji_books">&#x1F4DA;</string>
+    <string name="emoji_ruler">&#x1F4D0;</string>
+    <string name="emoji_flask">&#x1F9EA;</string>
+    <string name="emoji_write">&#x270D;&#xFE0F;</string>
+    <string name="emoji_letters">&#x1F524;</string>
+    <string name="emoji_globe">&#x1F30D;</string>
+    <string name="emoji_soccer">&#x26BD;</string>
+    <string name="emoji_art">&#x1F3A8;</string>
+    <string name="emoji_star">&#x2B50;</string>
+    <string name="emoji_clipboard">&#x1F4CB;</string>
+    <string name="emoji_image">&#x1F4F8;</string>
+    <string name="arrow_right">&#x2192;</string>
+
+    <!-- ===== Role Selection ===== -->
+    <string name="role_teacher">أنا معلم</string>
+    <string name="role_student">أنا طالب</string>
+
+    <!-- ===== Student App ===== -->
+    <string name="student_app_name">تطبيق الطالب</string>
+    <string name="welcome_student">مرحباً بك يا بطل!</string>
+    <string name="student_profile_setup">أنشئ ملفك الشخصي لتبدأ</string>
+    <string name="student_enter_name">اكتب اسمك الحقيقي...</string>
+    <string name="student_activate">دخول لمنصة الطلاب</string>
+    <string name="student_add_photo">اضغط لإضافة صورتك</string>
+    <string name="student_name_error">من فضلك اكتب اسمك الحقيقي (3 أحرف على الأقل)</string>
+    <string name="student_nav_home">الرئيسية</string>
+    <string name="student_nav_stats">إحصائياتي</string>
+    <string name="student_nav_sync">المزامنة</string>
+    <string name="student_lessons_count">%d دروس ذكية</string>
+    <string name="student_stars">النجوم</string>
+    <string name="student_level">المستوى</string>
+    <string name="student_subjects">المواد</string>
+    <string name="student_searching_radar">○ جاري البحث عن رادار المعلم...</string>
+    <string name="student_connected_radar">● متصل برادار المعلم</string>
+    <string name="student_read_complete">أنهيت القراءة +10</string>
+    <string name="student_points_added">+%d نجوم!</string>
+    <string name="student_submit_homework">إرسال الواجب للمعلم</string>
+    <string name="student_sending">جاري الإرسال...</string>
+    <string name="student_homework_sent">تم إرسال الواجب بنجاح!</string>
+    <string name="student_homework_failed">فشل الإرسال</string>
+    <string name="student_capture_homework">التقاط صورة الحل</string>
+    <string name="student_content_tab">الشرح</string>
+    <string name="student_homework_tab">الواجب</string>
+    <string name="student_no_lessons">لا توجد دروس منشورة في هذه المادة بعد</string>
+    <string name="student_no_subjects">لا توجد مواد متاحة حالياً</string>
+    <string name="student_lesson_content">محتوى الدرس</string>
+
+</resources>

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ========================================== -->
+    <!-- Material Design 3 Education - Dark Theme   -->
+    <!-- CardView: 16dp corners | Contrast: 7:1     -->
+    <!-- ========================================== -->
+
+    <style name="AppTheme"
+        parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Primary Colors (MD3 Tonal Palette) -->
+        <item name="colorPrimary">@color/indigo_400</item>
+        <item name="colorOnPrimary">@color/text_on_primary</item>
+        <item name="colorPrimaryContainer">@color/indigo_900</item>
+        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+        
+        <!-- Secondary -->
+        <item name="colorSecondary">@color/purple_500</item>
+        <item name="colorOnSecondary">@color/text_on_primary</item>
+        <item name="colorSecondaryContainer">@color/purple_700</item>
+        <item name="colorOnSecondaryContainer">@color/text_primary</item>
+        
+        <!-- Tertiary -->
+        <item name="colorTertiary">@color/emerald_500</item>
+        <item name="colorOnTertiary">@color/text_on_primary</item>
+        
+        <!-- Background & Surface (MD3 Containers - 7:1 contrast) -->
+        <item name="android:colorBackground">@color/main_background</item>
+        <item name="android:windowBackground">@color/main_background</item>
+        <item name="colorSurface">@color/main_surface</item>
+        <item name="colorSurfaceVariant">@color/main_surface_variant</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        
+        <!-- Text Colors (7:1 contrast ratio for education) -->
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        
+        <!-- Component Styles -->
+        <item name="materialButtonStyle">@style/AppButtonStyle</item>
+        <item name="textInputStyle">@style/AppTextInputStyle</item>
+        <item name="materialCardViewStyle">@style/EducationCardStyle</item>
+        
+        <!-- Status Bar -->
+        <item name="android:statusBarColor">@color/main_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/main_surface</item>
+        
+        <!-- Additional Material3 Colors -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/border</item>
+        <item name="colorOutlineVariant">@color/divider</item>
+    </style>
+
+    <!-- ========================================== -->
+    <!-- Education App Button Style (MD3)           -->
+    <!-- ========================================== -->
+    <style name="AppButtonStyle"
+        parent="Widget.Material3.Button">
+        <item name="cornerRadius">16dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="AppButtonStyleTonal"
+        parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <style name="AppButtonStyleOutlined"
+        parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <!-- ========================================== -->
+    <!-- Education TextInput Style (MD3)            -->
+    <!-- Dark mode: #1E293B background, white text  -->
+    <!-- ========================================== -->
+    <style name="AppTextInputStyle"
+        parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="boxStrokeColor">@color/input_stroke</item>
+        <item name="boxBackgroundColor">@color/input_background</item>
+        <item name="hintTextColor">@color/text_hint</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+    </style>
+
+    <!-- ========================================== -->
+    <!-- Education Card Style (MD3)                 -->
+    <!-- 16dp corners | Surface Container | 7:1    -->
+    <!-- ========================================== -->
+    <style name="EducationCardStyle"
+        parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">@color/card_background</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/card_stroke</item>
+        <item name="contentPadding">16dp</item>
+    </style>
+
+    <style name="EducationCardStyleElevated"
+        parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">@color/main_surface</item>
+        <item name="contentPadding">16dp</item>
+    </style>
+
+    <style name="EducationCardStyleOutlined"
+        parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/border</item>
+        <item name="cardBackgroundColor">@android:color/transparent</item>
+        <item name="contentPadding">16dp</item>
+    </style>
+
+    <!-- ========================================== -->
+    <!-- Legacy Card Styles (for compatibility)    -->
+    <!-- ========================================== -->
+    <style name="CardStyle"
+        parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">@color/card_background</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/card_stroke</item>
+    </style>
+
+    <style name="CardStyleElevated"
+        parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">@color/main_surface</item>
+    </style>
+
+    <!-- ========================================== -->
+    <!-- Education Chip Style (MD3)                 -->
+    <!-- ========================================== -->
+    <style name="EducationChipStyle"
+        parent="Widget.Material3.Chip.Filter">
+        <item name="chipCornerRadius">16dp</item>
+        <item name="chipBackgroundColor">@color/chip_blue</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- ========================================== -->
+    <!-- Education Bottom Navigation (MD3)          -->
+    <!-- ========================================== -->
+    <style name="EducationBottomNavStyle"
+        parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">@color/nav_background</item>
+        <item name="itemIconTint">@color/nav_selector</item>
+        <item name="itemTextColor">@color/nav_selector</item>
+        <item name="itemActiveIndicatorStyle">@style/EducationNavIndicator</item>
+    </style>
+
+    <style name="EducationNavIndicator"
+        parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/indigo_900</item>
+        <item name="shapeAppearance">@style/EducationNavIndicatorShape</item>
+    </style>
+
+    <style name="EducationNavIndicatorShape"
+        parent="ShapeAppearance.Material3.Corner.Full">
+        <item name="cornerSize">16dp</item>
+    </style>
+</resources>

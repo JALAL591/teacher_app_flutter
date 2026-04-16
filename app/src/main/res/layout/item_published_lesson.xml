@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+>
+<LinearLayout
+    android:id="@+id/publishedItemRoot"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- Avatar أخضر #4CAF50 -->
+    <FrameLayout
+        android:id="@+id/lessonImage"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:background="@drawable/lesson_avatar_published">
+
+        <TextView
+            android:id="@+id/lessonEmojiText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="&#x2713;"
+            android:textSize="24sp"
+            android:textColor="?attr/colorPrimary"
+            android:contentDescription="@string/desc_lesson_image" />
+
+    </FrameLayout>
+
+    <!-- معلومات الدرس -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp">
+
+        <TextView
+            android:id="@+id/lessonTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sample_lesson_title"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/publishedStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_published_check"
+            android:textSize="13sp"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
+
+    <!-- زر حذف يسار: #FF3B30 -->
+    <ImageView
+        android:id="@+id/deleteButton"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_delete"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/btn_delete"
+        app:tint="?attr/colorError" />
+
+</LinearLayout>
+
+</layout>

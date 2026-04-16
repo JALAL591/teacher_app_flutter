@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name_student">تطبيق الطالب</string>
+    <string name="welcome_title">مرحباً بك يا بطل!</string>
+    <string name="enter_name_hint">اكتب اسمك الحقيقي...</string>
+    <string name="activate_button">دخول لمنصة الطلاب</string>
+    <string name="error_name_short">من فضلك اكتب اسمك الحقيقي (3 أحرف على الأقل)</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_stats">إحصائياتي</string>
+    <string name="nav_sync">المزامنة</string>
+    <string name="lessons_count">%d دروس ذكية</string>
+    <string name="stars">النجوم</string>
+    <string name="level">المستوى</string>
+    <string name="subjects">المواد</string>
+    <string name="connection_searching">○ جاري البحث عن رادار المعلم...</string>
+    <string name="connection_connected">● متصل برادار المعلم</string>
+    <string name="reading_complete">أنهيت القراءة +10 🌟</string>
+    <string name="points_added">+%d نجوم! 🌟</string>
+    <string name="submit_homework">إرسال الواجب للمعلم 📤</string>
+    <string name="sending">جاري الإرسال...</string>
+    <string name="homework_sent">✅ تم إرسال الواجب بنجاح!</string>
+    <string name="homework_failed">❌ فشل الإرسال</string>
+    <string name="capture_homework">📷 التقاط صورة الحل</string>
+    <string name="lesson_content">محتوى الدرس</string>
+    <string name="homework_tab">📝 الواجب</string>
+    <string name="content_tab">📖 الشرح</string>
+    <string name="no_lessons">لا توجد دروس منشورة في هذه المادة بعد</string>
+    <string name="no_subjects">لا توجد مواد متاحة حالياً</string>
+</resources>

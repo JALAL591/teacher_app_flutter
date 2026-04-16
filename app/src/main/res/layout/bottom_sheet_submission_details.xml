@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+>
+<ScrollView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="?attr/colorSurface"
+        android:padding="@dimen/card_padding">
+
+        <!-- رأس الواجب -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="@dimen/spacing_md">
+
+            <TextView
+                android:id="@+id/submissionName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sample_student_name"
+                android:textSize="@dimen/text_lg"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/lessonTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sample_lesson_title"
+                android:textSize="@dimen/text_sm"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginTop="@dimen/margin_xs" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="?attr/colorSurfaceVariant"
+                android:paddingStart="@dimen/padding_sm"
+                android:paddingEnd="@dimen/padding_sm"
+                android:paddingTop="@dimen/padding_xs"
+                android:paddingBottom="@dimen/padding_xs"
+                android:layout_marginTop="@dimen/spacing_md">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/emoji_star"
+                    android:textSize="@dimen/text_sm" />
+
+                <TextView
+                    android:id="@+id/points"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sample_points"
+                    android:textSize="@dimen/text_sm"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorPrimary"
+                    android:layout_marginStart="@dimen/margin_xs" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- صورة الواجب -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_homework_attachment"
+            android:textSize="@dimen/text_sm"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="@dimen/margin_md" />
+
+        <ImageView
+            android:id="@+id/homeworkImage"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/image_preview_height"
+            android:scaleType="centerCrop"
+            android:background="?attr/colorSurface"
+            android:visibility="gone"
+            android:layout_marginBottom="@dimen/spacing_md" />
+
+        <!-- الأسئلة والإجابات -->
+        <TextView
+            android:id="@+id/quizTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_quiz_answers"
+            android:textSize="@dimen/text_sm"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="@dimen/margin_md" />
+
+        <LinearLayout
+            android:id="@+id/quizContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+    </LinearLayout>
+
+</ScrollView>
+</layout>

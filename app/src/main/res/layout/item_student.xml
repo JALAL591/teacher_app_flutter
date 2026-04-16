@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:tools="http://schemas.android.com/tools" xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+<!-- Telegram Chat Style Student Row -->
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="@dimen/content_padding_horizontal"
+        android:paddingEnd="@dimen/content_padding_horizontal"
+        android:paddingTop="@dimen/spacing_sm"
+        android:paddingBottom="@dimen/spacing_sm"
+        android:background="?attr/colorSurfaceVariant">
+
+        <!-- Circle Avatar Icon -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="@dimen/avatar_md"
+            android:layout_height="@dimen/avatar_md"
+            app:cardCornerRadius="@dimen/avatar_md_half"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="?attr/colorPrimary"
+            app:strokeWidth="0dp">
+
+            <TextView
+                android:id="@+id/studentEmoji"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="@string/emoji_person"
+                android:textSize="@dimen/text_lg"
+                android:textColor="?attr/colorSurface"
+                android:contentDescription="@string/desc_student_avatar" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Text Content -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="@dimen/margin_md">
+
+            <!-- Bold Name -->
+            <TextView
+                android:id="@+id/studentName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/default_student"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="@dimen/text_md"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:contentDescription="@string/desc_student_name" />
+
+            <!-- Subtitle -->
+            <TextView
+                android:id="@+id/studentDetails"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/margin_xs"
+                android:text="@string/sample_student_details"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="@dimen/text_sm"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:contentDescription="@string/desc_student_details" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Divider Line -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorOutline"
+        android:layout_marginStart="@dimen/avatar_md_plus_margin"
+        android:layout_marginEnd="@dimen/content_padding_horizontal" />
+
+</LinearLayout>
+
+</layout>

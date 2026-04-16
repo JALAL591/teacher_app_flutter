@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modern Capsule Button - 2024-2026 Style -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <!-- Vibrant gradient fill -->
+    <gradient
+        android:type="linear"
+        android:angle="90"
+        android:startColor="#667EEA"
+        android:endColor="#764BA2" />
+
+    <!-- Full capsule corners (extra rounded) -->
+    <corners android:radius="100dp" />
+
+</shape>

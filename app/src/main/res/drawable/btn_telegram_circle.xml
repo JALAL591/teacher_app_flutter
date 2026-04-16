@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Telegram-style Circular Icon Button -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/tg_divider">
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/tg_chip" />
+        </shape>
+    </item>
+</ripple>

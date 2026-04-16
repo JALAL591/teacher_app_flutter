@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+>
+<LinearLayout
+    android:id="@+id/studentItemRoot"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:background="?attr/colorSurfaceVariant">
+
+    <!-- Avatar دائري 54dp خلفية عشوائية -->
+    <FrameLayout
+        android:id="@+id/studentAvatar"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:background="@drawable/student_avatar_1">
+
+        <TextView
+            android:id="@+id/studentEmoji"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="&#x1F464;"
+            android:textSize="20sp"
+            android:textColor="?attr/colorSurface"
+            android:contentDescription="@string/desc_student_avatar" />
+
+    </FrameLayout>
+
+    <!-- معلومات الطالب: اسم + فصله -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp">
+
+        <TextView
+            android:id="@+id/studentName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/default_student"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/studentDetails"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sample_student_details"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginTop="2dp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+    </LinearLayout>
+
+    <!-- نقاط: 16sp Bold #2AABEE -->
+    <TextView
+        android:id="@+id/studentPoints"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/points_format"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorPrimary"
+        android:layout_marginEnd="12dp" />
+
+    <!-- زر حضور: دائرة خضراء 32dp ✓ -->
+    <FrameLayout
+        android:id="@+id/presentButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/avatar_present_bg"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="@string/desc_present_button">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/emoji_check_mark"
+            android:textSize="16sp"
+            android:textColor="?attr/colorSurface" />
+
+    </FrameLayout>
+
+    <!-- زر غياب: دائرة حمراء 32dp ✗ -->
+    <FrameLayout
+        android:id="@+id/absentButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/avatar_absent_bg"
+        android:layout_marginStart="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="@string/desc_absent_button">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/emoji_cross_mark"
+            android:textSize="16sp"
+            android:textColor="?attr/colorSurface" />
+
+    </FrameLayout>
+
+</LinearLayout>
+
+</layout>

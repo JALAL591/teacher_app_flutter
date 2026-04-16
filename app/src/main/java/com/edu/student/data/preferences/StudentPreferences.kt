@@ -1,0 +1,107 @@
+package com.edu.student.data.preferences
+
+import android.content.Context
+import android.content.SharedPreferences
+import com.edu.student.domain.model.Student
+import com.edu.student.domain.model.StudentStats
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+
+class StudentPreferences(context: Context) {
+    
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val gson = Gson()
+    
+    companion object {
+        private const val PREFS_NAME = "student_prefs"
+        private const val KEY_STUDENT_DATA = "student_data"
+        private const val KEY_ACTIVATED = "activated"
+        private const val KEY_COMPLETED_ACTIONS = "completed_actions"
+        private const val KEY_THEME = "theme"
+        private const val KEY_TEACHER_IP = "teacher_ip"
+        private const val KEY_ASSIGNED_TEACHER_ID = "assigned_teacher_id"
+        private const val KEY_STUDENT_CACHE_PREFIX = "student_cache_"
+    }
+    
+    fun isActivated(): Boolean = prefs.getBoolean(KEY_ACTIVATED, false)
+    
+    fun setActivated(activated: Boolean) {
+        prefs.edit().putBoolean(KEY_ACTIVATED, activated).apply()
+    }
+    
+    fun getStudent(): Student? {
+        val json = prefs.getString(KEY_STUDENT_DATA, null) ?: return null
+        return try {
+            gson.fromJson(json, Student::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    fun saveStudent(student: Student) {
+        prefs.edit().putString(KEY_STUDENT_DATA, gson.toJson(student)).apply()
+    }
+    
+    fun getCompletedActions(): List<String> {
+        val json = prefs.getString(KEY_COMPLETED_ACTIONS, "[]") ?: "[]"
+        return try {
+            val type = object : TypeToken<List<String>>() {}.type
+            gson.fromJson(json, type)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    
+    fun addCompletedAction(actionKey: String) {
+        val actions = getCompletedActions().toMutableList()
+        if (!actions.contains(actionKey)) {
+            actions.add(actionKey)
+            prefs.edit().putString(KEY_COMPLETED_ACTIONS, gson.toJson(actions)).apply()
+        }
+    }
+    
+    fun isActionCompleted(lessonId: String, actionType: String): Boolean {
+        return getCompletedActions().contains("${lessonId}-${actionType}")
+    }
+    
+    fun getTheme(): String = prefs.getString(KEY_THEME, "light") ?: "light"
+    
+    fun setTheme(theme: String) {
+        prefs.edit().putString(KEY_THEME, theme).apply()
+    }
+    
+    fun getTeacherIP(): String? = prefs.getString(KEY_TEACHER_IP, null)
+    
+    fun setTeacherIP(ip: String) {
+        prefs.edit().putString(KEY_TEACHER_IP, ip).apply()
+    }
+    
+    fun getAssignedTeacherId(): String? = prefs.getString(KEY_ASSIGNED_TEACHER_ID, null)
+    
+    fun setAssignedTeacherId(id: String) {
+        prefs.edit().putString(KEY_ASSIGNED_TEACHER_ID, id).apply()
+    }
+    
+    fun getCachedLessons(teacherId: String): String? {
+        return prefs.getString("${KEY_STUDENT_CACHE_PREFIX}${teacherId}", null)
+    }
+    
+    fun saveCachedLessons(teacherId: String, lessonsJson: String) {
+        prefs.edit().putString("${KEY_STUDENT_CACHE_PREFIX}${teacherId}", lessonsJson).apply()
+    }
+    
+    fun getStats(): StudentStats {
+        val student = getStudent()
+        val points = student?.points ?: 0
+        val actions = getCompletedActions()
+        return StudentStats(
+            stars = points,
+            level = (points / 100) + 1,
+            completedCount = actions.size
+        )
+    }
+    
+    fun clearAll() {
+        prefs.edit().clear().apply()
+    }
+}

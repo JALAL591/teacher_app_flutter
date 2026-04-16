@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+>
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface"
+    android:padding="@dimen/card_padding">
+
+    <!-- رأس البطاقة -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginBottom="@dimen/spacing_md">
+
+        <LinearLayout
+            android:layout_width="@dimen/avatar_lg"
+            android:layout_height="@dimen/avatar_lg"
+            android:background="@drawable/student_avatar_bg_large"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/studentInitial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/student_initial"
+                android:textSize="@dimen/text_xl"
+                android:textStyle="bold"
+                android:textColor="?attr/colorSurface" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/studentName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sample_student_name"
+            android:textSize="@dimen/text_lg"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:layout_marginTop="@dimen/margin_md" />
+
+        <TextView
+            android:id="@+id/studentGrade"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sample_student_grade"
+            android:textSize="@dimen/text_sm"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginTop="@dimen/margin_xs" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="?attr/colorSurfaceVariant"
+            android:paddingStart="@dimen/padding_sm"
+            android:paddingEnd="@dimen/padding_sm"
+            android:paddingTop="@dimen/padding_xs"
+            android:paddingBottom="@dimen/padding_xs"
+            android:layout_marginTop="@dimen/spacing_md">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/emoji_star"
+                android:textSize="@dimen/text_sm" />
+
+            <TextView
+                android:id="@+id/studentPoints"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sample_points"
+                android:textSize="@dimen/text_sm"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary"
+                android:layout_marginStart="@dimen/margin_xs" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- الأنشطة السابقة -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/label_previous_activities"
+        android:textSize="@dimen/text_sm"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:layout_marginBottom="@dimen/margin_md" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/historyRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false" />
+
+</LinearLayout>
+</layout>

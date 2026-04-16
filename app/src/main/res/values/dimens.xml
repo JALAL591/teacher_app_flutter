@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ===== Spacing & Padding ===== -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">20dp</dimen>
+    <dimen name="spacing_xl">24dp</dimen>
+    <dimen name="spacing_xxl">32dp</dimen>
+
+    <!-- ===== Screen & Toolbar ===== -->
+    <dimen name="padding_screen">16dp</dimen>
+    <dimen name="toolbar_height">56dp</dimen>
+
+    <!-- ===== Card (MD3 Education) ===== -->
+    <dimen name="card_corner">16dp</dimen>
+    <dimen name="card_elevation">0dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_margin">12dp</dimen>
+    <dimen name="card_stroke_width">1dp</dimen>
+
+    <!-- ===== RecyclerView ===== -->
+    <dimen name="recycler_item_height">72dp</dimen>
+    <dimen name="avatar_size">52dp</dimen>
+
+    <!-- ===== Stat Divider ===== -->
+    <dimen name="stat_divider_height">48dp</dimen>
+
+    <!-- ===== Card & Corner Radius ===== -->
+    <dimen name="radius_sm">8dp</dimen>
+    <dimen name="radius_md">12dp</dimen>
+    <dimen name="radius_lg">20dp</dimen>
+    <dimen name="radius_xl">32dp</dimen>
+    <dimen name="radius_full">100dp</dimen>
+
+    <!-- ===== Avatar Sizes ===== -->
+    <dimen name="avatar_sm">40dp</dimen>
+    <dimen name="avatar_md">52dp</dimen>
+    <dimen name="avatar_lg">72dp</dimen>
+    <dimen name="avatar_xl">120dp</dimen>
+
+    <!-- helper avatar values -->
+    <dimen name="avatar_md_half">26dp</dimen>
+    <dimen name="avatar_md_plus_margin">68dp</dimen>
+
+    <!-- ===== Avatar Icon Sizes ===== -->
+    <dimen name="avatar_icon_sm">20dp</dimen>
+    <dimen name="avatar_icon_md">24dp</dimen>
+    <dimen name="avatar_icon_lg">26dp</dimen>
+
+    <!-- ===== Text Sizes ===== -->
+    <dimen name="text_xs">11sp</dimen>
+    <dimen name="text_sm">12sp</dimen>
+    <dimen name="text_md">14sp</dimen>
+    <dimen name="text_lg">15sp</dimen>
+    <dimen name="text_xl">16sp</dimen>
+    <dimen name="text_xxl">18sp</dimen>
+    <dimen name="text_title">20sp</dimen>
+    <dimen name="text_header">22sp</dimen>
+    <dimen name="text_hero">28sp</dimen>
+
+    <!-- ===== Button Heights ===== -->
+    <dimen name="button_height_sm">40dp</dimen>
+    <dimen name="button_height_md">48dp</dimen>
+    <dimen name="button_height_lg">60dp</dimen>
+    <dimen name="button_height_xl">64dp</dimen>
+
+    <!-- ===== Icon Sizes ===== -->
+    <dimen name="icon_sm">20dp</dimen>
+    <dimen name="icon_md">24dp</dimen>
+
+    <!-- ===== Divider ===== -->
+    <dimen name="divider_height">1dp</dimen>
+    <dimen name="divider_margin_start">84dp</dimen>
+    <dimen name="divider_margin_end">16dp</dimen>
+
+    <!-- ===== Navigation Bar ===== -->
+    <dimen name="nav_bar_height">56dp</dimen>
+    <dimen name="nav_bar_elevation">8dp</dimen>
+    <dimen name="nav_fab_margin_bottom">28dp</dimen>
+
+    <!-- Telegram Liquid Glass Floating Nav Bar -->
+    <dimen name="nav_floating_height">72dp</dimen>
+    <dimen name="nav_floating_margin_start">20dp</dimen>
+    <dimen name="nav_floating_margin_end">20dp</dimen>
+    <dimen name="nav_floating_margin_bottom">24dp</dimen>
+    <dimen name="nav_floating_corner_radius">100dp</dimen>
+    <dimen name="nav_floating_elevation">16dp</dimen>
+    <dimen name="nav_floating_padding">12dp</dimen>
+    <dimen name="nav_icon_size">26dp</dimen>
+    <dimen name="nav_label_text_size">11sp</dimen>
+    <dimen name="nav_item_min_width">60dp</dimen>
+    <dimen name="nav_indicator_radius">32dp</dimen>
+    <dimen name="nav_indicator_margin">4dp</dimen>
+
+    <!-- ===== Row Padding ===== -->
+    <dimen name="row_padding_horizontal">16dp</dimen>
+    <dimen name="row_padding_vertical">14dp</dimen>
+    <dimen name="row_padding_top">12dp</dimen>
+    <dimen name="row_padding_bottom">12dp</dimen>
+
+    <!-- ===== Card Padding ===== -->
+    <dimen name="card_padding_sm">12dp</dimen>
+    <dimen name="card_padding_md">16dp</dimen>
+    <dimen name="card_padding_lg">24dp</dimen>
+
+    <!-- ===== Header Padding ===== -->
+    <dimen name="header_padding_top">48dp</dimen>
+    <dimen name="header_padding_bottom">20dp</dimen>
+    <dimen name="header_padding_horizontal">20dp</dimen>
+
+    <!-- ===== Content Padding ===== -->
+    <dimen name="content_padding_horizontal">16dp</dimen>
+    <dimen name="content_padding_top">16dp</dimen>
+    <dimen name="content_padding_bottom">100dp</dimen>
+
+    <!-- ===== Chip ===== -->
+    <dimen name="chip_min_height">32dp</dimen>
+    <dimen name="chip_corner_radius">16dp</dimen>
+    <dimen name="chip_padding_horizontal">8dp</dimen>
+
+    <!-- ===== Margin Between Elements ===== -->
+    <dimen name="margin_xs">2dp</dimen>
+    <dimen name="margin_sm">4dp</dimen>
+    <dimen name="margin_md">8dp</dimen>
+    <dimen name="margin_lg">12dp</dimen>
+    <dimen name="margin_xl">16dp</dimen>
+    <dimen name="margin_xxl">24dp</dimen>
+    <dimen name="margin_bottom_nav">100dp</dimen>
+
+    <!-- ===== Stat Item ===== -->
+    <dimen name="stat_number_size">28sp</dimen>
+    <dimen name="stat_label_size">13sp</dimen>
+
+    <!-- ===== Small paddings used in layouts -->
+    <dimen name="padding_sm">8dp</dimen>
+    <dimen name="padding_xs">4dp</dimen>
+
+    <!-- ===== Misc UI ===== -->
+    <dimen name="min_height_question">80dp</dimen>
+    <dimen name="image_preview_height">200dp</dimen>
+    <dimen name="subject_item_height">72dp</dimen>
+
+    <!-- ===== Modern 2026 Bento Grid ===== -->
+    <dimen name="bento_card_radius">24dp</dimen>
+    <dimen name="bento_card_radius_sm">20dp</dimen>
+    <dimen name="capsule_button_radius">100dp</dimen>
+    <dimen name="modern_icon_size">26dp</dimen>
+    <dimen name="modern_icon_size_lg">40dp</dimen>
+    <dimen name="modern_padding">20dp</dimen>
+    <dimen name="modern_padding_sm">16dp</dimen>
+</resources>

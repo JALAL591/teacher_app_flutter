@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Glassmorphism background with elevation shadow -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Soft shadow layer -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/glass_shadow_medium" />
+            <corners android:radius="@dimen/radius_md" />
+            <padding
+                android:bottom="2dp"
+                android:left="1dp"
+                android:right="1dp"
+                android:top="1dp" />
+        </shape>
+    </item>
+    
+    <!-- Glass background layer -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/glass_bg_light" />
+            <corners android:radius="@dimen/radius_md" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/glass_border_accent" />
+        </shape>
+    </item>
+</layer-list>

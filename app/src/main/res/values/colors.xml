@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ========================================== -->
+    <!-- Telegram Light Theme (Official Colors)     -->
+    <!-- ========================================== -->
+
+    <!-- Core Background Colors -->
+    <color name="tg_bg">#FFFFFF</color>
+    <color name="tg_bg_secondary">#EBEBF0</color>
+    <color name="tg_surface">#FFFFFF</color>
+    <color name="tg_header">#5288C1</color>
+
+    <!-- Text Colors (softer for light theme) -->
+    <color name="tg_text">#1E293B</color>
+    <color name="tg_hint">#94A3B8</color>
+    <color name="tg_link">#2678B6</color>
+
+    <!-- Accent & Button Colors (slightly transparent for softer look) -->
+    <color name="tg_accent">#E65288C1</color>
+    <color name="tg_blue">#E65288C1</color>
+    <color name="tg_blue_dark">#D94A7DB5</color>
+    <color name="tg_blue_light">#D96B9FD4</color>
+
+    <!-- Card & Section Colors (subtle transparency) -->
+    <color name="tg_section">#F5FFFFFF</color>
+    <color name="tg_chip">#F0F0F0</color>
+    <color name="tg_input">#F0F0F0</color>
+
+    <!-- Divider & Separator (subtle) -->
+    <color name="tg_divider">#CCF0F0F0</color>
+    <color name="tg_separator">#CCF0F0F0</color>
+
+    <!-- Message Colors -->
+    <color name="tg_msg_out">#EFFDDE</color>
+    <color name="tg_msg_in">#FFFFFF</color>
+
+    <!-- Status Colors (slightly softer) -->
+    <color name="tg_green">#E64CAF50</color>
+    <color name="tg_red">#E6E53935</color>
+    <color name="tg_yellow">#E6FFC107</color>
+    <color name="tg_destructive">#E6E53935</color>
+
+    <!-- Misc -->
+    <color name="tg_media_bg">#E0E0E0</color>
+    <color name="tg_wallpaper">#E5E5E5</color>
+
+    <!-- ========================================== -->
+    <!-- Standard Android / Material Colors         -->
+    <!-- ========================================== -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="primary">#4F46E5</color>
+    <color name="outline">#CBD5E1</color>
+    <color name="white_transparent_20">#33FFFFFF</color>
+    <color name="white_transparent_60">#99FFFFFF</color>
+    <color name="divider_gray">#C8C7CC</color>
+
+    <!-- Legacy compatibility colors (with subtle transparency) -->
+    <color name="tg_light_bg">#FFFFFF</color>
+    <color name="tg_light_surface">#F5FFFFFF</color>
+    <color name="tg_light_header">#F0FFFFFF</color>
+    <color name="tg_light_divider">#CCF0F0F0</color>
+    <color name="tg_light_text_primary">#1E293B</color>
+    <color name="tg_light_text_secondary">#94A3B8</color>
+    <color name="tg_light_chip">#F0F0F0</color>
+    <color name="tg_light_accent_soft">#EEF2FF</color>
+
+    <!-- Glass effect for navigation (solid modern look) -->
+    <color name="nav_glass_bg">#FFFFFF</color>
+    <color name="nav_glass_border">#E2E8F0</color>
+    <color name="nav_glass_shadow">#1A000000</color>
+    <color name="nav_indicator_bg">#335288C1</color>
+
+    <!-- ========================================== -->
+    <!-- Glassmorphism Colors -->
+    <!-- ========================================== -->
+    <!-- Glass backgrounds with transparency (80% opacity for better contrast) -->
+    <color name="glass_bg_light">#CCFFFFFF</color>
+    <color name="glass_bg_medium">#E6FFFFFF</color>
+    <color name="glass_bg_dark">#CC1A1A2E</color>
+    <color name="glass_bg_blue">#CC5288C1</color>
+    <color name="glass_bg_blue_dark">#E63D6A99</color>
+
+    <!-- Glass borders (white transparent stroke) -->
+    <color name="glass_border_light">#66FFFFFF</color>
+    <color name="glass_border_medium">#4DFFFFFF</color>
+    <color name="glass_border_dark">#33FFFFFF</color>
+    <color name="glass_border_accent">#80FFFFFF</color>
+
+    <!-- Glass shadows (soft and subtle) -->
+    <color name="glass_shadow_light">#0A000000</color>
+    <color name="glass_shadow_medium">#14000000</color>
+    <color name="glass_shadow_dark">#1A000000</color>
+
+    <!-- Glass border (for circle/oval shapes) -->
+    <color name="glass_border">#33FFFFFF</color>
+
+    <!-- Avatar colors -->
+    <color name="avatar_yellow">#FFF9C4</color>
+    <color name="avatar_green_light">#E8F5E9</color>
+
+    <!-- Chip colors -->
+    <color name="chip_blue">#E3F2FD</color>
+    <color name="amber_50">#FFFBEB</color>
+
+    <!-- Gradient for ID card -->
+    <color name="tg_blue_gradient_start">#E65288C1</color>
+    <color name="tg_blue_gradient_end">#D94A7DB5</color>
+
+    <!-- Radar -->
+    <color name="radar_dark">#1C2933</color>
+
+    <!-- ========================================== -->
+    <!-- Additional Colors (used in layouts/items)  -->
+    <!-- ========================================== -->
+
+    <!-- Slate palette (Material Design) -->
+    <color name="slate_50">#F8FAFC</color>
+    <color name="slate_100">#F1F5F9</color>
+    <color name="slate_200">#E2E8F0</color>
+    <color name="slate_300">#CBD5E1</color>
+    <color name="slate_400">#94A3B8</color>
+    <color name="slate_500">#64748B</color>
+    <color name="slate_600">#475569</color>
+    <color name="slate_700">#334155</color>
+    <color name="slate_800">#1E293B</color>
+    <color name="slate_900">#0F172A</color>
+
+    <!-- Indigo -->
+    <color name="indigo_400">#818CF8</color>
+    <color name="indigo_500">#3F51B5</color>
+    <color name="indigo_600">#4F46E5</color>
+    <color name="indigo_700">#4338CA</color>
+    <color name="indigo_900">#312E81</color>
+
+    <!-- Emerald -->
+    <color name="emerald_500">#10B981</color>
+    <color name="emerald_600">#059669</color>
+
+    <!-- Rose -->
+    <color name="rose_500">#F43F5E</color>
+    <color name="rose_600">#E11D48</color>
+
+    <!-- Amber -->
+    <color name="amber_500">#F59E0B</color>
+    <color name="amber_600">#D97706</color>
+
+    <!-- Text emphasis -->
+    <color name="text_high_emphasis">#1E293B</color>
+    <color name="text_medium_emphasis">#64748B</color>
+
+    <!-- Dark background (for compatibility) -->
+    <color name="dark_background">#0F172A</color>
+    <color name="light_background">#F8FAFC</color>
+    <color name="dark_surface">#1E293B</color>
+    <color name="light_surface">#FFFFFF</color>
+
+    <!-- Purple (legacy) -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+
+    <!-- Teal (legacy) -->
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+
+    <!-- Primary (legacy) -->
+    <color name="primary_blue">#4F46E5</color>
+    <color name="primary_dark">#4338CA</color>
+
+    <!-- ========================================== -->
+    <!-- Semantic Colors (DayNight Theme)          -->
+    <!-- ========================================== -->
+
+    <!-- Main Background & Surface -->
+    <color name="main_background">#FFFFFF</color>
+    <color name="main_surface">#FFFFFF</color>
+    <color name="main_surface_variant">#F8FAFC</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#1E293B</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_hint">#94A3B8</color>
+    <color name="text_on_primary">#FFFFFF</color>
+
+    <!-- Icon Colors -->
+    <color name="icon_primary">#1E293B</color>
+    <color name="icon_secondary">#64748B</color>
+    <color name="icon_inactive">#94A3B8</color>
+
+    <!-- Divider & Border -->
+    <color name="divider">#E2E8F0</color>
+    <color name="border">#CBD5E1</color>
+
+    <!-- Card & Container -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_stroke">#E2E8F0</color>
+
+    <!-- Input Fields -->
+    <color name="input_background">#F1F5F9</color>
+    <color name="input_stroke">#CBD5E1</color>
+    <color name="input_stroke_focused">#4F46E5</color>
+
+    <!-- Navigation -->
+    <color name="nav_background">#FFFFFF</color>
+    <color name="nav_active">#4F46E5</color>
+    <color name="nav_inactive">#94A3B8</color>
+
+    <!-- Status Colors -->
+    <color name="success">#10B981</color>
+    <color name="warning">#F59E0B</color>
+    <color name="error">#F43F5E</color>
+    <color name="info">#4F46E5</color>
+
+    <!-- Lesson Details Colors -->
+    <color name="lesson_text_light">#1E293B</color>
+    <color name="video_placeholder_bg">#E2E8F0</color>
+</resources>

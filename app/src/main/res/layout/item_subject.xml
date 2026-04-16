@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+>
+<!-- Subject Item for Stats and Sync - Glassmorphism Style -->
+<com.google.android.material.card.MaterialCardView
+
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/subject_item_height"
+    android:layout_marginBottom="@dimen/spacing_md"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="?attr/colorOutline">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="@dimen/content_padding_horizontal"
+        android:paddingEnd="@dimen/content_padding_horizontal"
+        android:background="?attr/selectableItemBackground">
+
+        <!-- Avatar -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="@dimen/avatar_md"
+            android:layout_height="@dimen/avatar_md"
+            app:cardCornerRadius="@dimen/avatar_md_half"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="?attr/colorPrimary"
+            app:strokeWidth="0dp">
+
+            <TextView
+                android:id="@+id/subjectEmoji"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="@string/emoji_books"
+                android:textSize="@dimen/text_lg"
+                android:textColor="?attr/colorSurface"
+                android:contentDescription="@string/desc_subject_icon" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Text Content -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="@dimen/margin_md">
+
+            <TextView
+                android:id="@+id/subjectText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/default_subject"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="@dimen/text_md"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:contentDescription="@string/desc_subject_name" />
+
+            <TextView
+                android:id="@+id/gradeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/margin_xs"
+                android:text="@string/text_classes_count"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="@dimen/text_sm"
+                android:contentDescription="@string/desc_subject_subtitle" />
+
+        </LinearLayout>
+
+        <!-- Count Badge -->
+        <TextView
+            android:id="@+id/countText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text_active_classes"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="@dimen/text_sm"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:contentDescription="@string/desc_subject_count" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
+</layout>

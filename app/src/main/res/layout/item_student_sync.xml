@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+>
+<!-- Student Sync Item - Glassmorphism Style -->
+<androidx.cardview.widget.CardView
+
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_md"
+    app:cardCornerRadius="@dimen/card_corner"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="?attr/colorSurface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="@dimen/card_padding"
+        android:background="?attr/colorSurface">
+
+        <!-- صورة الطالب -->
+        <LinearLayout
+            android:layout_width="@dimen/avatar_md"
+            android:layout_height="@dimen/avatar_md"
+            android:background="@drawable/student_avatar_bg"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/studentInitial"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/student_initial"
+                android:textSize="@dimen/text_lg"
+                android:textStyle="bold"
+                android:textColor="?attr/colorSurface" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="@dimen/margin_md">
+
+            <TextView
+                android:id="@+id/studentName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sample_student_name"
+                android:textSize="@dimen/text_md"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/lessonTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sample_lesson_title"
+                android:textSize="@dimen/text_xs"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginTop="@dimen/margin_xs" />
+
+        </LinearLayout>
+
+        <!-- صورة الواجب إن وجدت -->
+        <ImageView
+            android:id="@+id/homeworkImage"
+            android:layout_width="@dimen/avatar_sm"
+            android:layout_height="@dimen/avatar_sm"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:contentDescription="@string/desc_homework_image" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/arrow_right"
+            android:textSize="@dimen/text_md"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginStart="@dimen/margin_md" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
+</layout>
