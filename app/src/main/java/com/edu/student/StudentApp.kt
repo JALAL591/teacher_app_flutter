@@ -10,6 +10,30 @@ class StudentApp : Application() {
     companion object {
         lateinit var instance: StudentApp
             private set
+        
+        fun applyTheme(mode: String) {
+            when (mode) {
+                "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+                "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+                else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+            }
+        }
+        
+        fun toggleTheme(enableDark: Boolean) {
+            val prefs = StudentPreferences(instance)
+            val theme = if (enableDark) "dark" else "light"
+            prefs.setTheme(theme)
+            applyTheme(theme)
+        }
+        
+        fun isDarkMode(): Boolean {
+            return try {
+                AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
+            } catch (e: Exception) {
+                val prefs = StudentPreferences(instance)
+                prefs.getTheme() == "dark"
+            }
+        }
     }
     
     override fun onCreate() {
@@ -21,27 +45,6 @@ class StudentApp : Application() {
     private fun syncTheme() {
         val prefs = StudentPreferences(this)
         val theme = prefs.getTheme()
-        
-        val nightMode = when (theme) {
-            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-            else -> AppCompatDelegate.MODE_NIGHT_NO
-        }
-        
-        if (AppCompatDelegate.getDefaultNightMode() != nightMode) {
-            AppCompatDelegate.setDefaultNightMode(nightMode)
-        }
-    }
-    
-    fun toggleTheme(enableDark: Boolean) {
-        val prefs = StudentPreferences(this)
-        prefs.setTheme(if (enableDark) "dark" else "light")
-        
-        val nightMode = if (enableDark) {
-            AppCompatDelegate.MODE_NIGHT_YES
-        } else {
-            AppCompatDelegate.MODE_NIGHT_NO
-        }
-        
-        AppCompatDelegate.setDefaultNightMode(nightMode)
+        applyTheme(theme)
     }
 }

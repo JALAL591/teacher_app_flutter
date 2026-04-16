@@ -28,6 +28,7 @@ import java.util.TimerTask
 class SyncActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySyncBinding
+    private var teacherServer: TeacherServer? = null
 
     private var subjectsList = mutableListOf<JSONObject>()
     private var activeSubject: JSONObject? = null
@@ -37,7 +38,6 @@ class SyncActivity : AppCompatActivity() {
     private var syncTimer: Timer? = null
     private val SYNC_INTERVAL_MS = 15 * 60 * 1000L
 
-    // ألوان عشوائية للأفاتار
     private val avatarColors = listOf(
         R.color.tg_blue,
         R.color.tg_green,
@@ -68,13 +68,89 @@ class SyncActivity : AppCompatActivity() {
             return
         }
 
+        initServer()
         initViews()
         loadSubjects()
     }
 
+    private fun initServer() {
+        teacherServer = TeacherServer(this)
+        
+        teacherServer?.onStudentConnected = { studentId, studentName ->
+            runOnUiThread {
+                val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+                val existingIndex = connectedStudents.indexOfFirst { it.id == studentId }
+                
+                val newStudent = ConnectedStudentItem(
+                    id = studentId,
+                    name = studentName,
+                    grade = "غير محدد",
+                    section = "أ",
+                    connectedAt = currentTime
+                )
+                
+                if (existingIndex >= 0) {
+                    connectedStudents[existingIndex] = newStudent
+                } else {
+                    connectedStudents.add(newStudent)
+                }
+                
+                binding.studentsRecyclerView.adapter?.notifyDataSetChanged()
+                updateConnectedCount()
+                Toast.makeText(this, "طالب متصل: $studentName", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        teacherServer?.onStudentDisconnected = { studentId ->
+            runOnUiThread {
+                connectedStudents.removeAll { it.id == studentId }
+                binding.studentsRecyclerView.adapter?.notifyDataSetChanged()
+                updateConnectedCount()
+            }
+        }
+        
+        teacherServer?.onLessonsRequested = { grade, section, teacherIdReq ->
+            runOnUiThread {
+                Toast.makeText(this, "طلب دروس: $grade - $section", Toast.LENGTH_SHORT).show()
+                broadcastLessonsToStudents(grade, section)
+            }
+        }
+    }
+
+    private fun broadcastLessonsToStudents(grade: String, section: String) {
+        val prefs = getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
+        val lessonsJson = prefs.getString("lessons_$teacherId", "[]") ?: "[]"
+        
+        val lessons = mutableListOf<JSONObject>()
+        try {
+            val jsonArray = org.json.JSONArray(lessonsJson)
+            for (i in 0 until jsonArray.length()) {
+                val lesson = jsonArray.getJSONObject(i)
+                val lessonGrade = lesson.optString("grade", "")
+                val lessonSection = lesson.optString("section", "")
+                if ((grade.isEmpty() || lessonGrade == grade) && 
+                    (section.isEmpty() || lessonSection == section)) {
+                    lessons.add(lesson)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        teacherServer?.broadcastLessonsUpdate(lessons)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isRadarActive) {
+            teacherServer?.start()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        stopAutoSync()
+        stopRadar()
+        teacherServer?.stop()
     }
 
     private fun initViews() {
@@ -119,62 +195,38 @@ class SyncActivity : AppCompatActivity() {
         binding.studentsRecyclerView.visibility = View.VISIBLE
         binding.connectedStudentsTitle.visibility = View.VISIBLE
 
-        loadMockConnectedStudents()
-
         binding.studentsRecyclerView.adapter = ConnectedStudentsAdapter(connectedStudents)
         updateConnectedCount()
     }
 
-    private fun loadMockConnectedStudents() {
-        connectedStudents.clear()
-        val mockNames = listOf(
-            getString(R.string.mock_student_1),
-            getString(R.string.mock_student_2),
-            getString(R.string.mock_student_3),
-            getString(R.string.mock_student_4)
-        )
-        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-        mockNames.forEachIndexed { _, name ->
-            connectedStudents.add(
-                ConnectedStudentItem(
-                    id = DataManager.generateSubmissionId(),
-                    name = name,
-                    grade = getString(R.string.mock_grade),
-                    section = getString(R.string.mock_section),
-                    connectedAt = currentTime
-                )
-            )
-        }
-    }
-
     private fun startRadar() {
         isRadarActive = true
+        teacherServer?.start()
+        
         binding.radarStatusText.text = getString(R.string.radar_status_running)
         binding.activateRadarButton.text = getString(R.string.btn_stop_radar)
         binding.activateRadarButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
             ContextCompat.getColor(this, R.color.tg_red)
         )
 
-        // تأثير النبض للمؤشر
         startPulseAnimation()
-
-        // بدء المزامنة التلقائية
         startAutoSync()
         updateConnectedCount()
+        
+        Toast.makeText(this, "تم تشغيل الرادار - الطلاب يمكنهم الاتصال الآن", Toast.LENGTH_LONG).show()
     }
 
     private fun stopRadar() {
         isRadarActive = false
+        teacherServer?.stop()
+        
         binding.radarStatusText.text = getString(R.string.radar_status_stopped)
         binding.activateRadarButton.text = getString(R.string.btn_start_radar)
         binding.activateRadarButton.backgroundTintList = android.content.res.ColorStateList.valueOf(
             ContextCompat.getColor(this, R.color.tg_blue)
         )
 
-        // إيقاف تأثير النبض
         stopPulseAnimation()
-
-        // إيقاف المزامنة التلقائية
         stopAutoSync()
     }
 
@@ -204,9 +256,7 @@ class SyncActivity : AppCompatActivity() {
         }
 
         Handler(Looper.getMainLooper()).postDelayed({
-            // محاكاة بيانات الطلاب المتصلين
             if (isRadarActive) {
-                loadMockConnectedStudents()
                 binding.studentsRecyclerView.adapter?.notifyDataSetChanged()
                 updateConnectedCount()
             }
@@ -240,7 +290,7 @@ class SyncActivity : AppCompatActivity() {
     }
 
     private fun updateConnectedCount() {
-        val count = if (isRadarActive) connectedStudents.size else 0
+        val count = teacherServer?.getConnectedCount() ?: connectedStudents.size
         binding.connectedCountText.text = "$count طلاب متصلون"
     }
 
@@ -286,7 +336,6 @@ class SyncActivity : AppCompatActivity() {
 
             holder.binding.studentEmoji.setImageResource(R.drawable.ic_student)
 
-            // تعيين لون عشوائي للأفاتار
             val colorRes = avatarColors[position % avatarColors.size]
             val avatarBg = holder.binding.studentAvatar.background
             if (avatarBg is GradientDrawable) {

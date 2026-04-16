@@ -3,6 +3,7 @@ package com.edu.teacher
 import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import com.edu.teacher.utils.ThemeManager
 
 class TeacherApp : Application() {
     
@@ -26,29 +27,15 @@ class TeacherApp : Application() {
         
         fun syncTheme() {
             val prefs = instance.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
-            val theme = prefs.getString("theme", "light") ?: "light"
-            
-            val nightMode = when (theme) {
-                "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-                else -> AppCompatDelegate.MODE_NIGHT_NO
-            }
-            
-            if (AppCompatDelegate.getDefaultNightMode() != nightMode) {
-                AppCompatDelegate.setDefaultNightMode(nightMode)
-            }
+            ThemeManager.loadSavedTheme(prefs)
         }
         
         fun isDarkMode(): Boolean {
-            return try {
-                AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
-            } catch (e: Exception) {
-                val prefs = instance.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
-                prefs.getString("theme", "light") == "dark"
-            }
+            return ThemeManager.isDarkMode()
         }
         
         fun applyThemeWithDebounce(enableDark: Boolean, debounceMs: Long = 400) {
-            toggleTheme(enableDark)
+            ThemeManager.toggleThemeWithDebounce(enableDark, debounceMs)
         }
     }
     

@@ -98,7 +98,7 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         }
 
         binding.themeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            (application as? StudentApp)?.toggleTheme(isChecked)
+            StudentApp.toggleTheme(isChecked)
         }
 
         binding.logoutButton.setOnClickListener {
@@ -298,7 +298,6 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     private fun toggleTheme() {
         val isDark = repository.getTheme() == "dark"
         repository.setTheme(if (isDark) "light" else "dark")
-        recreate()
     }
 
     private fun logout() {
