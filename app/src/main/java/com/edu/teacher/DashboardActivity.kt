@@ -190,20 +190,8 @@ class DashboardActivity : BaseActivity() {
             .show()
     }
 
-    private fun getEmoji(subject: String): String {
-        val s = subject.lowercase()
-        return when {
-            s.contains(getString(R.string.default_subject)) -> EmojiConstants.DEFAULT_SUBJECT
-            s.contains("قرآن") || s.contains("إسلام") -> EmojiConstants.QURAN_ISLAMIC
-            s.contains("رياضيات") || s.contains("حساب") -> EmojiConstants.MATH
-            s.contains("علوم") || s.contains("فيزياء") || s.contains("كيمياء") -> EmojiConstants.SCIENCE
-            s.contains("عربي") || s.contains("لغة") -> EmojiConstants.ARABIC
-            s.contains("إنجليزي") || s.contains("انجليزي") -> EmojiConstants.ENGLISH
-            s.contains("تاريخ") || s.contains("جغرافيا") -> EmojiConstants.HISTORY_GEOGRAPHY
-            s.contains("رياضة") || s.contains("بدنية") -> EmojiConstants.PE_SPORTS
-            s.contains("فن") || s.contains("رسم") -> EmojiConstants.ART
-            else -> EmojiConstants.DEFAULT_SUBJECT
-        }
+    private fun getSubjectIcon(subject: String): Int {
+        return EmojiConstants.getSubjectIcon(subject)
     }
 
     private fun scheduleAutoSync() {
@@ -255,7 +243,7 @@ class DashboardActivity : BaseActivity() {
                 subjectName
             }
             holder.binding.sectionText.text = if (grade.isNotEmpty() && section.isNotEmpty()) "$grade/$section" else section
-            holder.binding.emojiText.text = getEmoji(subjectName)
+            holder.binding.emojiText.setImageResource(getSubjectIcon(subjectName))
 
             holder.binding.deleteButton.setOnClickListener {
                 AlertDialog.Builder(this@DashboardActivity)

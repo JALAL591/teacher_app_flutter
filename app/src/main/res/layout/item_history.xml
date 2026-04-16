@@ -13,19 +13,11 @@
     android:background="?attr/colorSurface"
     android:layout_marginBottom="@dimen/margin_md">
 
-    <LinearLayout
-        android:layout_width="@dimen/avatar_sm"
-        android:layout_height="@dimen/avatar_sm"
-        android:background="?attr/colorSurfaceVariant"
-        android:gravity="center">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/emoji_clipboard"
-            android:textSize="@dimen/text_lg" />
-
-    </LinearLayout>
+    <ImageView
+        android:layout_width="@dimen/avatar_icon_md"
+        android:layout_height="@dimen/avatar_icon_md"
+        android:src="@drawable/ic_book"
+        app:tint="?attr/colorOnSurfaceVariant" />
 
     <LinearLayout
         android:layout_width="0dp"

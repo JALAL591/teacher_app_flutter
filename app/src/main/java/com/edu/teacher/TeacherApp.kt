@@ -47,7 +47,7 @@ class TeacherApp : Application() {
             }
         }
         
-        fun applyThemeWithDebounce(enableDark: Boolean) {
+        fun applyThemeWithDebounce(enableDark: Boolean, debounceMs: Long = 400) {
             toggleTheme(enableDark)
         }
     }

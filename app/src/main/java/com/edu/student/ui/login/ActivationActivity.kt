@@ -86,6 +86,13 @@ class ActivationActivity : AppCompatActivity() {
         
         val student = repository.createStudent(name, avatarBase64)
         
+        val teacherPrefs = getSharedPreferences("teacher_app", MODE_PRIVATE)
+        teacherPrefs.edit().apply {
+            putString("user_role", "student")
+            putBoolean("is_logged_in", true)
+            apply()
+        }
+        
         Toast.makeText(this, "مرحباً بك يا ${student.name}! 🌟", Toast.LENGTH_LONG).show()
         navigateToDashboard()
     }

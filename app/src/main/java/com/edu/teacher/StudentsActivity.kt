@@ -139,7 +139,7 @@ class StudentsActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val student = students[position]
 
-            holder.binding.studentEmoji.text = student.emoji
+            holder.binding.studentEmoji.setImageResource(R.drawable.ic_student)
             holder.binding.studentName.text = student.name
             holder.binding.studentDetails.text = if (student.count > 0) {
                 getString(R.string.text_student_details, student.subject, student.count.toString())

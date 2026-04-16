@@ -281,9 +281,7 @@ class StatsActivity : AppCompatActivity() {
                 avatarBg.setColor(ContextCompat.getColor(this@StatsActivity, colorRes))
             }
 
-            // تعيين الإيموجي (أول حرف من الاسم)
-            val firstLetter = if (student.name.isNotEmpty()) student.name[0].toString() else "?"
-            holder.binding.studentEmoji.text = firstLetter
+            holder.binding.studentEmoji.setImageResource(R.drawable.ic_student)
 
             holder.binding.presentButton.setOnClickListener { onAttendanceClick(student, "present") }
             holder.binding.absentButton.setOnClickListener { onAttendanceClick(student, "absent") }

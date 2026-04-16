@@ -14,21 +14,20 @@
     android:paddingEnd="16dp"
     android:background="?attr/selectableItemBackground">
 
-    <!-- Avatar دائري 54dp يمين: خلفية #2AABEE -->
+    <!-- Avatar Material Icon -->
     <FrameLayout
         android:id="@+id/avatarContainer"
         android:layout_width="54dp"
         android:layout_height="54dp"
         android:background="@drawable/logo_circle">
 
-        <TextView
+        <ImageView
             android:id="@+id/emojiText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:layout_gravity="center"
-            android:text="&#x1F4DA;"
-            android:textSize="20sp"
-            android:textColor="?attr/colorSurface"
+            android:src="@drawable/ic_school"
+            app:tint="?attr/colorSurface"
             android:contentDescription="@string/desc_class_icon" />
 
     </FrameLayout>

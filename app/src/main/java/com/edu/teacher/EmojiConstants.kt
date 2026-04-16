@@ -1,5 +1,7 @@
 package com.edu.teacher
 
+import androidx.annotation.DrawableRes
+
 /**
  * Centralized emoji and Unicode constants for the application.
  * All emojis are defined using Unicode escape sequences to avoid encoding issues.
@@ -30,7 +32,7 @@ object EmojiConstants {
     const val BROADCAST = "\uD83D\uDCE1"
     const val SAVE = "\uD83D\uDCBE"
 
-    // Subjects
+    // Subjects (emoji strings for reference)
     const val QURAN_ISLAMIC = "\uD83C\uDF19"
     const val MATH = "\uD83D\uDCD0"
     const val SCIENCE = "\uD83E\uDDEA"
@@ -45,4 +47,20 @@ object EmojiConstants {
     const val VIDEO = "\uD83C\uDFE5"
     const val BOOKS = "\uD83D\uDCDA"
     const val PEOPLE = "\uD83D\uDC65"
+
+    @DrawableRes
+    fun getSubjectIcon(subject: String): Int {
+        val s = subject.lowercase()
+        return when {
+            s.contains("قرآن") || s.contains("إسلام") -> R.drawable.ic_book
+            s.contains("رياضيات") || s.contains("حساب") -> R.drawable.ic_book
+            s.contains("علوم") || s.contains("فيزياء") || s.contains("كيمياء") -> R.drawable.ic_book
+            s.contains("عربي") || s.contains("لغة") -> R.drawable.ic_book
+            s.contains("إنجليزي") || s.contains("انجليزي") -> R.drawable.ic_book
+            s.contains("تاريخ") || s.contains("جغرافيا") -> R.drawable.ic_book
+            s.contains("رياضة") || s.contains("بدنية") -> R.drawable.ic_book
+            s.contains("فن") || s.contains("رسم") -> R.drawable.ic_book
+            else -> R.drawable.ic_book
+        }
+    }
 }

@@ -27,14 +27,13 @@
             app:cardBackgroundColor="?attr/colorPrimary"
             app:strokeWidth="0dp">
 
-            <TextView
+            <ImageView
                 android:id="@+id/studentEmoji"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="@string/emoji_person"
-                android:textSize="@dimen/text_lg"
-                android:textColor="?attr/colorSurface"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_student"
+                app:tint="?attr/colorSurface"
                 android:contentDescription="@string/desc_student_avatar" />
 
         </com.google.android.material.card.MaterialCardView>

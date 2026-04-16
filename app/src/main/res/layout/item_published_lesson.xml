@@ -14,21 +14,20 @@
     android:paddingEnd="16dp"
     android:background="?attr/selectableItemBackground">
 
-    <!-- Avatar أخضر #4CAF50 -->
+    <!-- Avatar Material Icon -->
     <FrameLayout
         android:id="@+id/lessonImage"
         android:layout_width="54dp"
         android:layout_height="54dp"
         android:background="@drawable/lesson_avatar_published">
 
-        <TextView
+        <ImageView
             android:id="@+id/lessonEmojiText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:layout_gravity="center"
-            android:text="&#x2713;"
-            android:textSize="24sp"
-            android:textColor="?attr/colorPrimary"
+            android:src="@drawable/ic_check"
+            app:tint="?attr/colorSurface"
             android:contentDescription="@string/desc_lesson_image" />
 
     </FrameLayout>

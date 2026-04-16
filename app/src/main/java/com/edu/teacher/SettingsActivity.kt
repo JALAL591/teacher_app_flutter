@@ -237,7 +237,7 @@ class SettingsActivity : BaseActivity() {
             .setTitle(R.string.dialog_logout)
             .setMessage(R.string.msg_confirm_logout_detailed)
             .setPositiveButton(R.string.btn_yes) { _, _ ->
-                prefs.edit().remove("is_logged_in").apply()
+                prefs.edit().clear().apply()
                 val intent = Intent(this, LoginActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)

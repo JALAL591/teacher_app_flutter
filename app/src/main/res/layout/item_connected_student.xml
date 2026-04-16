@@ -25,14 +25,13 @@
             android:layout_height="54dp"
             android:background="@drawable/student_avatar_1">
 
-            <TextView
+            <ImageView
                 android:id="@+id/studentEmoji"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:layout_gravity="center"
-                android:text="&#x1F464;"
-                android:textSize="20sp"
-                android:textColor="?attr/colorSurface"
+                android:src="@drawable/ic_student"
+                app:tint="?attr/colorSurface"
                 android:contentDescription="@string/desc_student_avatar" />
 
         </FrameLayout>

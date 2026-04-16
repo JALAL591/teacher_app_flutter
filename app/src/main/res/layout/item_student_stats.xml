@@ -14,21 +14,20 @@
     android:paddingEnd="16dp"
     android:background="?attr/colorSurfaceVariant">
 
-    <!-- Avatar دائري 54dp خلفية عشوائية -->
+    <!-- Avatar Material Icon -->
     <FrameLayout
         android:id="@+id/studentAvatar"
         android:layout_width="54dp"
         android:layout_height="54dp"
         android:background="@drawable/student_avatar_1">
 
-        <TextView
+        <ImageView
             android:id="@+id/studentEmoji"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:layout_gravity="center"
-            android:text="&#x1F464;"
-            android:textSize="20sp"
-            android:textColor="?attr/colorSurface"
+            android:src="@drawable/ic_student"
+            app:tint="?attr/colorSurface"
             android:contentDescription="@string/desc_student_avatar" />
 
     </FrameLayout>
@@ -77,7 +76,7 @@
         android:textColor="?attr/colorPrimary"
         android:layout_marginEnd="12dp" />
 
-    <!-- زر حضور: دائرة خضراء 32dp ✓ -->
+    <!-- زر حضور: دائرة خضراء 32dp -->
     <FrameLayout
         android:id="@+id/presentButton"
         android:layout_width="32dp"
@@ -87,17 +86,16 @@
         android:focusable="true"
         android:contentDescription="@string/desc_present_button">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
             android:layout_gravity="center"
-            android:text="@string/emoji_check_mark"
-            android:textSize="16sp"
-            android:textColor="?attr/colorSurface" />
+            android:src="@drawable/ic_check"
+            app:tint="?attr/colorSurface" />
 
     </FrameLayout>
 
-    <!-- زر غياب: دائرة حمراء 32dp ✗ -->
+    <!-- زر غياب: دائرة حمراء 32dp -->
     <FrameLayout
         android:id="@+id/absentButton"
         android:layout_width="32dp"
@@ -108,13 +106,12 @@
         android:focusable="true"
         android:contentDescription="@string/desc_absent_button">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
             android:layout_gravity="center"
-            android:text="@string/emoji_cross_mark"
-            android:textSize="16sp"
-            android:textColor="?attr/colorSurface" />
+            android:src="@drawable/ic_delete"
+            app:tint="?attr/colorSurface" />
 
     </FrameLayout>
 

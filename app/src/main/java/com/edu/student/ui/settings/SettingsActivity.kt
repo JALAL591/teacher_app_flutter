@@ -98,7 +98,7 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         }
 
         binding.themeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            (application as StudentApp).toggleTheme(isChecked)
+            (application as? StudentApp)?.toggleTheme(isChecked)
         }
 
         binding.logoutButton.setOnClickListener {
@@ -307,6 +307,7 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             .setMessage("هل أنت متأكد من تسجيل الخروج وإعادة التفعيل؟")
             .setPositiveButton("نعم") { _, _ ->
                 prefs.clearAll()
+                getSharedPreferences("teacher_app", MODE_PRIVATE).edit().clear().apply()
                 startActivity(Intent(this, ActivationActivity::class.java))
                 finishAffinity()
             }

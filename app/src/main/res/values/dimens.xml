@@ -13,8 +13,8 @@
     <dimen name="toolbar_height">56dp</dimen>
 
     <!-- ===== Card (MD3 Education) ===== -->
-    <dimen name="card_corner">16dp</dimen>
-    <dimen name="card_elevation">0dp</dimen>
+    <dimen name="card_corner">12dp</dimen>
+    <dimen name="card_elevation">2dp</dimen>
     <dimen name="card_padding">16dp</dimen>
     <dimen name="card_margin">12dp</dimen>
     <dimen name="card_stroke_width">1dp</dimen>

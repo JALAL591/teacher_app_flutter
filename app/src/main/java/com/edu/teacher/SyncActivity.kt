@@ -284,9 +284,7 @@ class SyncActivity : AppCompatActivity() {
             holder.binding.onlineStatusText.text = getString(R.string.label_connected_now)
             holder.binding.connectionTimeText.text = student.connectedAt
 
-            // تعيين أول حرف من الاسم كإيموجي
-            val firstLetter = if (student.name.isNotEmpty()) student.name[0].toString() else "?"
-            holder.binding.studentEmoji.text = firstLetter
+            holder.binding.studentEmoji.setImageResource(R.drawable.ic_student)
 
             // تعيين لون عشوائي للأفاتار
             val colorRes = avatarColors[position % avatarColors.size]
