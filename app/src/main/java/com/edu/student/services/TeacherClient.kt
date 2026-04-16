@@ -3,19 +3,23 @@ package com.edu.student.services
 import android.content.Context
 import android.util.Log
 import com.edu.student.data.preferences.StudentPreferences
+import com.edu.student.utils.StudentWifiDirectManager
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
+import java.net.InetAddress
 import java.net.Socket
 
 class TeacherClient(private val context: Context) {
     
     companion object {
         private const val TAG = "TeacherClient"
-        private const val SERVER_PORT = 9999
-        private const val BROADCAST_PORT = 9998
+        const val SERVER_PORT = 9999
+        private const val HOTSPOT_IP = "192.168.43.1"
     }
     
     private val prefs = StudentPreferences(context)
@@ -24,14 +28,11 @@ class TeacherClient(private val context: Context) {
     private var socket: Socket? = null
     private var reader: BufferedReader? = null
     private var writer: PrintWriter? = null
-    private var teacherIP: String = "192.168.43.1"
     private var isRunning = false
+    private var currentServerIP: String = HOTSPOT_IP
     private var listenerJob: Job? = null
     
-    private val HOTSPOT_IPS = listOf(
-        "192.168.43.1", "192.168.42.129", "172.20.10.1",
-        "192.168.1.1", "192.168.0.1", "10.0.0.1", "127.0.0.1"
-    )
+    private var wifiDirectManager: StudentWifiDirectManager? = null
     
     var isConnected: Boolean = false
         private set
@@ -67,121 +68,95 @@ class TeacherClient(private val context: Context) {
         isManualDisconnect = false
         isRunning = true
         
-        scope.launch {
-            startUDPDiscovery()
-            teacherIP = discoverTeacherIP()
-            if (teacherIP != "0.0.0.0") {
-                connect()
-            } else {
-                scheduleRetry()
-            }
-        }
+        initWifiDirect()
+        connect()
     }
     
-    private suspend fun startUDPDiscovery() = withContext(Dispatchers.IO) {
-        try {
-            val socket = java.net.DatagramSocket()
-            socket.broadcast = true
-            socket.soTimeout = 5000
-            
-            val requestData = JSONObject().apply {
-                put("type", "DISCOVER_TEACHER")
-                put("version", "1.0")
-            }.toString()
-            
-            val requestPacket = java.net.DatagramPacket(
-                requestData.toByteArray(),
-                requestData.length,
-                java.net.InetAddress.getByName("255.255.255.255"),
-                BROADCAST_PORT
-            )
-            
-            socket.send(requestPacket)
-            Log.d(TAG, "Discovery broadcast sent")
-            
-            val buffer = ByteArray(1024)
-            val responsePacket = java.net.DatagramPacket(buffer, buffer.size)
-            
-            try {
-                socket.receive(responsePacket)
-                val response = String(responsePacket.data, 0, responsePacket.length)
-                val json = JSONObject(response)
-                
-                if (json.optString("type") == "TEACHER_ANNOUNCE") {
-                    val discoveredIP = responsePacket.address.hostAddress
-                    teacherIP = discoveredIP ?: teacherIP
-                    prefs.setTeacherIP(teacherIP)
-                    Log.d(TAG, "Teacher discovered at: $teacherIP")
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "No broadcast response, will try IPs")
-            }
-            
-            socket.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "UDP discovery error", e)
-        }
-    }
-    
-    private suspend fun discoverTeacherIP(): String = withContext(Dispatchers.IO) {
-        val savedIP = prefs.getTeacherIP()
-        if (savedIP != null && pingServer(savedIP)) {
-            return@withContext savedIP
+    private fun initWifiDirect() {
+        wifiDirectManager = StudentWifiDirectManager(context)
+        wifiDirectManager?.initialize()
+        wifiDirectManager?.register()
+        
+        wifiDirectManager?.onWifiP2pEnabled = { enabled ->
+            Log.d(TAG, "WiFi Direct enabled: $enabled")
         }
         
-        for (ip in HOTSPOT_IPS) {
-            if (pingServer(ip)) {
-                prefs.setTeacherIP(ip)
-                return@withContext ip
+        wifiDirectManager?.onPeersAvailable = { peers ->
+            Log.d(TAG, "Found ${peers.size} teachers nearby")
+        }
+        
+        wifiDirectManager?.onConnectedToTeacher = { groupOwnerAddress ->
+            Log.d(TAG, "Connected via WiFi Direct to: ${groupOwnerAddress.hostAddress}")
+            currentServerIP = groupOwnerAddress.hostAddress ?: HOTSPOT_IP
+            
+            if (!isConnected) {
+                connectToServer(groupOwnerAddress)
             }
         }
         
-        return@withContext "192.168.43.1"
-    }
-    
-    private suspend fun pingServer(ip: String): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val testSocket = Socket()
-            testSocket.connect(java.net.InetSocketAddress(ip, SERVER_PORT), 1000)
-            testSocket.close()
-            true
-        } catch (e: Exception) {
-            false
+        wifiDirectManager?.onDisconnected = {
+            Log.d(TAG, "Disconnected from WiFi Direct")
         }
     }
     
     private fun connect() {
         scope.launch(Dispatchers.IO) {
+            connectToServer(HOTSPOT_IP)
+        }
+    }
+    
+    private fun connectToServer(serverAddress: String) {
+        connectToServer(InetAddress.getByName(serverAddress))
+    }
+    
+    private fun connectToServer(serverAddress: InetAddress) {
+        scope.launch(Dispatchers.IO) {
             try {
-                socket = Socket(teacherIP, SERVER_PORT)
+                val ip = serverAddress.hostAddress ?: HOTSPOT_IP
+                Log.d(TAG, "Connecting to teacher at $ip:$SERVER_PORT")
+                
+                socket = Socket(serverAddress, SERVER_PORT)
                 socket?.soTimeout = 0
                 
                 reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
                 writer = PrintWriter(socket!!.getOutputStream(), true)
                 
                 isConnected = true
-                Log.d(TAG, "Connected to teacher at $teacherIP:$SERVER_PORT")
+                currentServerIP = ip
+                Log.d(TAG, "Connected to teacher at $ip:$SERVER_PORT")
+                
+                val student = prefs.getStudent()
+                val grade = currentGrade ?: student?.grade ?: ""
+                val section = currentSection ?: student?.section ?: ""
+                
+                if (student != null) {
+                    registerStudent(student.id, student.name, grade, section)
+                }
                 
                 if (!hasAutoRequested) {
                     hasAutoRequested = true
-                    val grade = currentGrade ?: prefs.getStudent()?.grade ?: ""
-                    val section = currentSection ?: prefs.getStudent()?.section ?: ""
-                    
                     if (grade.isNotEmpty() && section.isNotEmpty()) {
-                        Log.d(TAG, "Auto-requesting lessons for $grade-$section")
+                        Log.d(TAG, "Requesting lessons for $grade-$section")
                         requestLessons(grade, section)
                     }
                 }
                 
-                callback?.onConnected(teacherIP)
-                emit("connected", teacherIP)
+                runOnUiThread {
+                    callback?.onConnected(ip)
+                }
+                emit("connected", ip)
                 
                 listenForMessages()
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Connection failed to $teacherIP", e)
+                Log.e(TAG, "Connection failed: ${e.message}", e)
                 isConnected = false
-                callback?.onError(e.message ?: "Connection failed")
+                
+                wifiDirectManager?.discoverTeachers()
+                
+                runOnUiThread {
+                    callback?.onError("لا يمكن الاتصال بالمعلم - جاري البحث...")
+                }
                 emit("disconnected", null)
                 scheduleRetry()
             }
@@ -198,7 +173,7 @@ class TeacherClient(private val context: Context) {
                     }
                 } catch (e: Exception) {
                     if (isRunning) {
-                        Log.e(TAG, "Read error", e)
+                        Log.e(TAG, "Read error: ${e.message}", e)
                         break
                     }
                 }
@@ -206,23 +181,37 @@ class TeacherClient(private val context: Context) {
         } finally {
             if (isRunning && !isManualDisconnect) {
                 isConnected = false
-                callback?.onDisconnected()
+                withContext(Dispatchers.Main) {
+                    callback?.onDisconnected()
+                }
                 emit("disconnected", null)
+                
+                wifiDirectManager?.discoverTeachers()
                 scheduleRetry()
             }
         }
     }
     
-    private fun handleIncoming(data: String) {
+    private suspend fun handleIncoming(data: String) {
         try {
-            val json = JSONObject(data)
+            val trimmedData = data.trim()
+            if (trimmedData.isEmpty()) return
+            
+            val json: JSONObject
+            try {
+                json = JSONObject(trimmedData)
+            } catch (e: Exception) {
+                Log.e(TAG, "Invalid JSON format: $trimmedData")
+                return
+            }
+            
             val action = json.optString("action", "")
             val status = json.optString("status", "")
             
             when {
                 action == "LESSONS_DATA" || action == "lessons_updated" -> {
                     val lessonsJson = json.optJSONArray("lessons")
-                    if (lessonsJson != null) {
+                    if (lessonsJson != null && lessonsJson.length() > 0) {
                         val teacherId = prefs.getAssignedTeacherId() ?: ""
                         prefs.saveCachedLessons(teacherId, lessonsJson.toString())
                         
@@ -237,17 +226,58 @@ class TeacherClient(private val context: Context) {
                             }
                         }
                         
-                        Log.d(TAG, "Received ${lessons.size} lessons from broadcast")
-                        callback?.onLessonsReceived(lessons)
-                        emit("lessons_updated", lessons)
+                        if (lessons.isNotEmpty()) {
+                            Log.d(TAG, "Received ${lessons.size} lessons")
+                            withContext(Dispatchers.Main) {
+                                callback?.onLessonsReceived(lessons)
+                            }
+                            emit("lessons_updated", lessons)
+                        }
                     }
                 }
                 action == "LESSON_BROADCAST" -> {
                     val lessonJson = json.optJSONObject("lesson")
                     if (lessonJson != null) {
                         val lesson = gson.fromJson(lessonJson.toString(), com.edu.student.domain.model.Lesson::class.java)
-                        Log.d(TAG, "Received single lesson broadcast: ${lesson.title}")
+                        Log.d(TAG, "Received lesson broadcast: ${lesson.title}")
+                        
+                        val teacherId = prefs.getAssignedTeacherId() ?: ""
+                        val cached = prefs.getCachedLessons(teacherId)
+                        val lessons = if (cached != null) {
+                            try {
+                                val type = object : TypeToken<MutableList<com.edu.student.domain.model.Lesson>>() {}.type
+                                gson.fromJson<MutableList<com.edu.student.domain.model.Lesson>>(cached, type)
+                            } catch (e: Exception) { mutableListOf() }
+                        } else { mutableListOf() }
+                        
+                        lessons.add(0, lesson)
+                        prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+                        
                         emit("lesson_broadcast", lesson)
+                    } else {
+                        val lessonStr = json.optString("lesson", "")
+                        if (lessonStr.isNotEmpty()) {
+                            try {
+                                val lesson = gson.fromJson(lessonStr, com.edu.student.domain.model.Lesson::class.java)
+                                Log.d(TAG, "Received lesson broadcast (string): ${lesson.title}")
+                                
+                                val teacherId = prefs.getAssignedTeacherId() ?: ""
+                                val cached = prefs.getCachedLessons(teacherId)
+                                val lessons = if (cached != null) {
+                                    try {
+                                        val type = object : TypeToken<MutableList<com.edu.student.domain.model.Lesson>>() {}.type
+                                        gson.fromJson<MutableList<com.edu.student.domain.model.Lesson>>(cached, type)
+                                    } catch (e: Exception) { mutableListOf() }
+                                } else { mutableListOf() }
+                                
+                                lessons.add(0, lesson)
+                                prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+                                
+                                emit("lesson_broadcast", lesson)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error parsing lesson from string", e)
+                            }
+                        }
                     }
                 }
                 status == "REGISTERED" -> {
@@ -261,21 +291,27 @@ class TeacherClient(private val context: Context) {
             
             emit(action.ifEmpty { status }.ifEmpty { "data" }, json.toMap())
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing message", e)
+            Log.e(TAG, "Error parsing message: ${e.message}", e)
         }
     }
     
-    fun sendData(payload: Map<String, Any?>) {
+    private fun sendData(payload: Map<String, Any?>) {
         if (!isConnected) {
             Log.w(TAG, "Cannot send data: not connected")
             return
         }
         
-        val data = payload.toMutableMap()
-        data["timestamp"] = System.currentTimeMillis().toString()
-        
-        val json = JSONObject(data).toString()
-        writer?.println(json)
+        scope.launch(Dispatchers.IO) {
+            val data = payload.toMutableMap()
+            data["timestamp"] = System.currentTimeMillis().toString()
+            
+            val json = JSONObject(data).toString()
+            writer?.println(json)
+        }
+    }
+    
+    fun sendCustomData(payload: Map<String, Any?>) {
+        sendData(payload)
     }
     
     fun registerStudent(studentId: String, studentName: String, grade: String, section: String) {
@@ -316,7 +352,9 @@ class TeacherClient(private val context: Context) {
     }
     
     private fun emit(event: String, data: Any?) {
-        listeners[event]?.forEach { it.invoke(data) }
+        scope.launch(Dispatchers.Main) {
+            listeners[event]?.forEach { it.invoke(data) }
+        }
     }
     
     private fun scheduleRetry() {
@@ -325,16 +363,19 @@ class TeacherClient(private val context: Context) {
         retryJob?.cancel()
         retryJob = scope.launch {
             delay(5000)
-            if (!isManualDisconnect && isRunning) {
+            if (!isManualDisconnect && isRunning && !isConnected) {
+                Log.d(TAG, "Retrying connection...")
                 hasAutoRequested = false
-                startUDPDiscovery()
-                teacherIP = discoverTeacherIP()
-                if (teacherIP != "0.0.0.0") {
-                    connect()
-                } else {
-                    scheduleRetry()
-                }
+                connect()
             }
+        }
+    }
+    
+    private fun runOnUiThread(action: () -> Unit) {
+        try {
+            android.os.Handler(android.os.Looper.getMainLooper()).post(action)
+        } catch (e: Exception) {
+            action()
         }
     }
     
@@ -344,6 +385,8 @@ class TeacherClient(private val context: Context) {
         isConnected = false
         retryJob?.cancel()
         listenerJob?.cancel()
+        
+        wifiDirectManager?.unregister()
         
         try {
             reader?.close()
@@ -367,11 +410,17 @@ class TeacherClient(private val context: Context) {
             init()
         }
     }
+    
+    fun startWifiDirectSearch() {
+        wifiDirectManager?.discoverTeachers()
+    }
 }
 
 private fun JSONObject.toMap(): Map<String, Any?> {
     val map = mutableMapOf<String, Any?>()
-    keys().forEach { key ->
+    val keys = keys()
+    while (keys.hasNext()) {
+        val key = keys.next()
         map[key] = get(key)
     }
     return map

@@ -123,9 +123,12 @@ class ClassManagerActivity : AppCompatActivity() {
         binding.localDraftsRecyclerView.adapter = LocalLessonsAdapter(localLessons) { lesson, position ->
             showPublishDialog(lesson, position)
         }
-        binding.publishedLessonsRecyclerView.adapter = PublishedLessonsAdapter(publishedLessons) { lesson, position ->
-            showDeletePublishedDialog(lesson, position)
-        }
+        binding.publishedLessonsRecyclerView.adapter = PublishedLessonsAdapter(
+            publishedLessons,
+            onDelete = { lesson, position -> showDeletePublishedDialog(lesson, position) },
+            onBroadcast = { lesson, position -> broadcastLesson(lesson, position) },
+            onEdit = { lesson, position -> editLesson(lesson, position) }
+        )
     }
 
     private fun showPublishDialog(lesson: JSONObject, position: Int) {
@@ -169,6 +172,34 @@ class ClassManagerActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun broadcastLesson(lesson: JSONObject, @Suppress("UNUSED_PARAMETER") position: Int) {
+        Toast.makeText(this, "جاري بث الدرس: ${lesson.optString("title")}", Toast.LENGTH_SHORT).show()
+        
+        var server = (application as? TeacherApp)?.teacherServer
+        if (server == null) {
+            server = TeacherServer(this)
+            (application as? TeacherApp)?.teacherServer = server
+        }
+        
+        if ((application as? TeacherApp)?.teacherServer?.isRunning != true) {
+            server.start()
+            Toast.makeText(this, "تم تشغيل الرادار تلقائياً", Toast.LENGTH_SHORT).show()
+        }
+        
+        server.broadcastLesson(lesson)
+        Toast.makeText(this, "تم بث الدرس للطلاب المتصلين", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun editLesson(lesson: JSONObject, @Suppress("UNUSED_PARAMETER") position: Int) {
+        val intent = Intent(this, EditLessonActivity::class.java).apply {
+            putExtra("class_id", classId)
+            putExtra("subject_id", subjectId)
+            putExtra("teacher_id", teacherId)
+            putExtra("lesson_json", lesson.toString())
+        }
+        startActivity(intent)
+    }
+
     inner class LocalLessonsAdapter(
         private val lessons: List<JSONObject>,
         private val onPublish: (JSONObject, Int) -> Unit
@@ -205,7 +236,9 @@ class ClassManagerActivity : AppCompatActivity() {
 
     inner class PublishedLessonsAdapter(
         private val lessons: List<JSONObject>,
-        private val onDelete: (JSONObject, Int) -> Unit
+        private val onDelete: (JSONObject, Int) -> Unit,
+        private val onBroadcast: (JSONObject, Int) -> Unit,
+        private val onEdit: (JSONObject, Int) -> Unit
     ) : RecyclerView.Adapter<PublishedLessonsAdapter.ViewHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -226,6 +259,8 @@ class ClassManagerActivity : AppCompatActivity() {
                 startActivity(intent)
             }
             
+            holder.binding.broadcastButton.setOnClickListener { onBroadcast(lesson, position) }
+            holder.binding.editButton.setOnClickListener { onEdit(lesson, position) }
             holder.binding.deleteButton.setOnClickListener { onDelete(lesson, position) }
         }
 

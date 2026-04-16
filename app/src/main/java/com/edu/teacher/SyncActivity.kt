@@ -1,16 +1,25 @@
 package com.edu.teacher
 
+import android.Manifest
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.drawable.GradientDrawable
+import android.location.LocationManager
+import android.net.wifi.p2p.WifiP2pDevice
+import android.net.wifi.p2p.WifiP2pInfo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -18,17 +27,23 @@ import androidx.recyclerview.widget.RecyclerView
 import com.edu.teacher.databinding.ActivitySyncBinding
 import com.edu.teacher.databinding.ItemConnectedStudentBinding
 import com.edu.teacher.databinding.ItemSubjectBinding
+import com.edu.teacher.utils.WifiDirectManager
+import com.edu.teacher.utils.WifiP2pBroadcastListener
 import org.json.JSONObject
+import java.net.InetAddress
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Timer
 import java.util.TimerTask
 
-class SyncActivity : AppCompatActivity() {
+class SyncActivity : AppCompatActivity(), WifiP2pBroadcastListener {
 
     private lateinit var binding: ActivitySyncBinding
     private var teacherServer: TeacherServer? = null
+    private var wifiDirectManager: WifiDirectManager? = null
+    
+    private var connectionMode = ConnectionMode.HOTSPOT
 
     private var subjectsList = mutableListOf<JSONObject>()
     private var activeSubject: JSONObject? = null
@@ -49,6 +64,12 @@ class SyncActivity : AppCompatActivity() {
         R.color.rose_500
     )
 
+    enum class ConnectionMode {
+        HOTSPOT,
+        WIFI_DIRECT,
+        BLUETOOTH
+    }
+
     data class ConnectedStudentItem(
         val id: String,
         val name: String,
@@ -56,6 +77,17 @@ class SyncActivity : AppCompatActivity() {
         val section: String,
         val connectedAt: String
     )
+    
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.all { it.value }
+        if (allGranted) {
+            initWifiDirect()
+        } else {
+            Toast.makeText(this, "صلاحيات الموقع مطلوبة لـ WiFi Direct", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,12 +103,105 @@ class SyncActivity : AppCompatActivity() {
         initServer()
         initViews()
         loadSubjects()
+        checkPermissions()
+    }
+    
+    private fun checkPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+            != PackageManager.PERMISSION_GRANTED) {
+            locationPermissionLauncher.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ))
+        } else {
+            initWifiDirect()
+        }
+    }
+    
+    @SuppressLint("MissingPermission")
+    private fun initWifiDirect() {
+        wifiDirectManager = WifiDirectManager(this)
+        wifiDirectManager?.initialize()
+        wifiDirectManager?.setReceiverListener(this)
+        wifiDirectManager?.register()
+        
+        wifiDirectManager?.onWifiP2pEnabled = { enabled ->
+            runOnUiThread {
+                if (enabled) {
+                    Toast.makeText(this, "WiFi Direct متاح", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        
+        wifiDirectManager?.onPeersAvailable = { peers ->
+            runOnUiThread {
+                if (peers.isNotEmpty()) {
+                    showPeersDialog(peers)
+                }
+            }
+        }
+    }
+    
+    @SuppressLint("MissingPermission")
+    private fun showPeersDialog(peers: List<WifiP2pDevice>) {
+        val deviceNames = peers.map { it.deviceName.ifEmpty { it.deviceAddress } }.toTypedArray()
+        
+        AlertDialog.Builder(this)
+            .setTitle("الطلاب المتوفرين")
+            .setItems(deviceNames) { _, which ->
+                wifiDirectManager?.connect(peers[which])
+            }
+            .setNegativeButton("إلغاء", null)
+            .show()
+    }
+    
+    @SuppressLint("MissingPermission")
+    private fun showConnectionModeDialog() {
+        val modes = arrayOf("نقطة البث (Hotspot)", "WiFi Direct", "البلوتوث")
+        
+        AlertDialog.Builder(this)
+            .setTitle("اختر طريقة الاتصال")
+            .setItems(modes) { _, which ->
+                when (which) {
+                    0 -> {
+                        connectionMode = ConnectionMode.HOTSPOT
+                        startHotspotMode()
+                    }
+                    1 -> {
+                        connectionMode = ConnectionMode.WIFI_DIRECT
+                        startWifiDirectMode()
+                    }
+                    2 -> {
+                        connectionMode = ConnectionMode.BLUETOOTH
+                        startBluetoothMode()
+                    }
+                }
+            }
+            .show()
+    }
+    
+    private fun startHotspotMode() {
+        Toast.makeText(this, "وضع نقطة البث - IP: 192.168.43.1", Toast.LENGTH_LONG).show()
+    }
+    
+    @SuppressLint("MissingPermission")
+    private fun startWifiDirectMode() {
+        if (wifiDirectManager?.hasPermissions() == true) {
+            wifiDirectManager?.discoverPeers()
+            Toast.makeText(this, "جاري البحث عن الطلاب...", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "مفقود صلاحيات WiFi Direct", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun startBluetoothMode() {
+        Toast.makeText(this, "وضع البلوتوث - جاري التطوير", Toast.LENGTH_SHORT).show()
     }
 
     private fun initServer() {
         teacherServer = TeacherServer(this)
         
-        teacherServer?.onStudentConnected = { studentId, studentName ->
+        teacherServer?.onStudentConnected = { studentId, studentName, grade, section ->
             runOnUiThread {
                 val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
                 val existingIndex = connectedStudents.indexOfFirst { it.id == studentId }
@@ -84,8 +209,8 @@ class SyncActivity : AppCompatActivity() {
                 val newStudent = ConnectedStudentItem(
                     id = studentId,
                     name = studentName,
-                    grade = "غير محدد",
-                    section = "أ",
+                    grade = grade.ifEmpty { "غير محدد" },
+                    section = section.ifEmpty { "أ" },
                     connectedAt = currentTime
                 )
                 
@@ -109,7 +234,7 @@ class SyncActivity : AppCompatActivity() {
             }
         }
         
-        teacherServer?.onLessonsRequested = { grade, section, teacherIdReq ->
+        teacherServer?.onLessonsRequested = { grade, section, _ ->
             runOnUiThread {
                 Toast.makeText(this, "طلب دروس: $grade - $section", Toast.LENGTH_SHORT).show()
                 broadcastLessonsToStudents(grade, section)
@@ -147,12 +272,6 @@ class SyncActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        stopRadar()
-        teacherServer?.stop()
-    }
-
     private fun initViews() {
         binding.subjectsRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.studentsRecyclerView.layoutManager = LinearLayoutManager(this)
@@ -164,7 +283,7 @@ class SyncActivity : AppCompatActivity() {
             if (isRadarActive) {
                 stopRadar()
             } else {
-                startRadar()
+                showConnectionModeDialog()
             }
         }
     }
@@ -200,8 +319,14 @@ class SyncActivity : AppCompatActivity() {
     }
 
     private fun startRadar() {
+        if (!checkLocationEnabled()) {
+            showLocationSettingsDialog()
+            return
+        }
+        
         isRadarActive = true
         teacherServer?.start()
+        (application as? TeacherApp)?.teacherServer = teacherServer
         
         binding.radarStatusText.text = getString(R.string.radar_status_running)
         binding.activateRadarButton.text = getString(R.string.btn_stop_radar)
@@ -215,10 +340,28 @@ class SyncActivity : AppCompatActivity() {
         
         Toast.makeText(this, "تم تشغيل الرادار - الطلاب يمكنهم الاتصال الآن", Toast.LENGTH_LONG).show()
     }
+    
+    private fun checkLocationEnabled(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+               locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+    
+    private fun showLocationSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("تفعيل الموقع")
+            .setMessage("يجب تفعيل الموقع (GPS) لاستخدام الرادار. هل تريد فتح الإعدادات؟")
+            .setPositiveButton("فتح الإعدادات") { _, _ ->
+                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
+            .setNegativeButton("إلغاء", null)
+            .show()
+    }
 
     private fun stopRadar() {
         isRadarActive = false
         teacherServer?.stop()
+        (application as? TeacherApp)?.teacherServer = null
         
         binding.radarStatusText.text = getString(R.string.radar_status_stopped)
         binding.activateRadarButton.text = getString(R.string.btn_start_radar)
@@ -346,5 +489,18 @@ class SyncActivity : AppCompatActivity() {
         override fun getItemCount(): Int = students.size
 
         inner class StudentViewHolder(val binding: ItemConnectedStudentBinding) : RecyclerView.ViewHolder(binding.root)
+    }
+    
+    override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+        if (intent.action == android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION) {
+            wifiDirectManager?.requestConnectionInfo()
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        stopRadar()
+        teacherServer?.stop()
+        wifiDirectManager?.unregister()
     }
 }

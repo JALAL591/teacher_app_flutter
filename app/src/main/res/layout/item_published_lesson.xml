@@ -63,6 +63,32 @@
 
     </LinearLayout>
 
+    <!-- زر بث يسار -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/broadcastButton"
+        android:layout_width="wrap_content"
+        android:layout_height="36dp"
+        android:text="بث"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorSurface"
+        android:backgroundTint="?attr/colorPrimary"
+        app:cornerRadius="100dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:layout_marginEnd="8dp" />
+
+    <!-- زر تعديل يسار -->
+    <ImageView
+        android:id="@+id/editButton"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_edit"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/btn_edit"
+        app:tint="?attr/colorOnSurfaceVariant"
+        android:layout_marginEnd="8dp" />
+
     <!-- زر حذف يسار: #FF3B30 -->
     <ImageView
         android:id="@+id/deleteButton"

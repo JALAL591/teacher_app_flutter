@@ -6,19 +6,16 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.databinding.*
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Subject
-import com.edu.student.domain.model.StudentStats
 import com.edu.student.services.TeacherClient
-import com.edu.student.services.SyncService
 import com.edu.student.ui.common.SubjectAdapter
-import com.edu.student.ui.lesson.LessonActivity
 import com.edu.student.ui.settings.SettingsActivity
 import com.edu.student.ui.stats.StatsActivity
 import com.edu.student.ui.subject.SubjectActivity
+import com.edu.student.utils.PermissionHelper
 import kotlinx.coroutines.*
 
 class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
@@ -26,7 +23,6 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     private lateinit var binding: StudentActivityDashboardBinding
     private lateinit var repository: StudentRepository
     private lateinit var teacherClient: TeacherClient
-    private lateinit var syncService: SyncService
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var refreshJob: Job? = null
@@ -37,6 +33,8 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         binding = StudentActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
+        checkPermissions()
+        
         repository = StudentRepository(this)
         
         if (!repository.isLoggedIn()) {
@@ -46,36 +44,48 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         
         teacherClient = TeacherClient(this)
         teacherClient.setCallback(this)
-        syncService = SyncService(this)
         
         setupViews()
         loadData()
         initTeacherConnection()
     }
     
+    private fun checkPermissions() {
+        if (!PermissionHelper.hasAllPermissions(this)) {
+            PermissionHelper.requestPermissions(this)
+        }
+        
+        if (!PermissionHelper.hasNotificationPermission(this)) {
+            PermissionHelper.requestNotificationPermission(this)
+        }
+    }
+    
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        PermissionHelper.onRequestPermissionsResult(
+            requestCode,
+            grantResults,
+            onGranted = {
+                Toast.makeText(this, "تم منح جميع الصلاحيات", Toast.LENGTH_SHORT).show()
+            },
+            onDenied = { denied ->
+                Toast.makeText(
+                    this,
+                    "بعض الصلاحيات مرفوضة: ${denied.joinToString(", ")}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        )
+    }
+    
     override fun onResume() {
         super.onResume()
         loadData()
-    }
-    
-    private fun syncWithTeacher() {
-        if (isSyncing) return
-        isSyncing = true
-        
-        syncService.syncLessons(object : SyncService.SyncCallback {
-            override fun onSuccess(lessons: List<com.edu.student.domain.model.Lesson>) {
-                repository.saveLessons(lessons)
-                runOnUiThread {
-                    isSyncing = false
-                    loadData()
-                    Toast.makeText(this@DashboardActivity, "Sync complete!", Toast.LENGTH_SHORT).show()
-                }
-            }
-            
-            override fun onError(error: String) {
-                isSyncing = false
-            }
-        })
     }
     
     override fun onDestroy() {
@@ -162,38 +172,34 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     
     override fun onConnected(ip: String) {
         runOnUiThread {
-            // Connected - green background
             binding.statusBar.setBackgroundColor(Color.parseColor("#10B981"))
-            binding.connectionStatus.text = "Connected to Teacher Radar"
-            
+            binding.connectionStatus.text = "متصل بالرادار"
             binding.aiStatus.visibility = View.VISIBLE
             
-            // Request lessons from teacher
             val student = repository.getStudent()
             if (student != null) {
                 teacherClient.requestLessons(student.grade, student.section)
             }
-            
-            // One-time sync when connected
-            syncWithTeacher()
         }
     }
     
     override fun onDisconnected() {
         runOnUiThread {
-            // Searching - orange background
             binding.statusBar.setBackgroundColor(Color.parseColor("#F59E0B"))
-            binding.connectionStatus.text = "Searching for Teacher Radar..."
-            // Reset sync flag to allow sync on next connection
+            binding.connectionStatus.text = "يبحث عن رادار المعلم..."
             isSyncing = false
         }
     }
     
     override fun onLessonsReceived(lessons: List<com.edu.student.domain.model.Lesson>) {
+        if (lessons.isNullOrEmpty()) return
+        
         repository.saveLessons(lessons)
         runOnUiThread {
-            loadData()
-            Toast.makeText(this, "Lessons updated!", Toast.LENGTH_SHORT).show()
+            if (!isFinishing && !isDestroyed) {
+                loadData()
+                Toast.makeText(this, "تم تحديث الدروس!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     

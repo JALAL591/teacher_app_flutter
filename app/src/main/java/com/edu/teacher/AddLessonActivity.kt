@@ -31,6 +31,11 @@ class AddLessonActivity : AppCompatActivity() {
     private var selectedUnit = ""
     private var selectedPdfPath: String = ""
     private var questionsList = mutableListOf<QuestionItem>()
+    
+    private var selectedSubjectId: String = ""
+    private var selectedSubjectTitle: String = ""
+    private var selectedGrade: String = ""
+    private var selectedSection: String = ""
 
     data class QuestionItem(
         var id: String,
@@ -127,6 +132,7 @@ class AddLessonActivity : AppCompatActivity() {
             val classes = DataManager.getClasses(this, teacherId, subjectId)
             classes.forEach { cls ->
                 cls.put("subjectName", subjectName as Any)
+                cls.put("subjectId", subjectId as Any)
                 classesList.add(cls)
             }
         }
@@ -145,13 +151,23 @@ class AddLessonActivity : AppCompatActivity() {
         binding.classSpinner.adapter = classAdapter
 
         if (classesList.isNotEmpty()) {
-            selectedClassId = classesList[0].optString("id")
+            val firstClass = classesList[0]
+            selectedClassId = firstClass.optString("id")
+            selectedSubjectId = firstClass.optString("subjectId")
+            selectedSubjectTitle = firstClass.optString("subjectName", getString(R.string.default_subject))
+            selectedGrade = firstClass.optString("grade", "")
+            selectedSection = firstClass.optString("section", "")
         }
 
         binding.classSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p0: android.widget.AdapterView<*>?, p1: View?, position: Int, p3: Long) {
                 if (position < classesList.size) {
-                    selectedClassId = classesList[position].optString("id")
+                    val selectedClass = classesList[position]
+                    selectedClassId = selectedClass.optString("id")
+                    selectedSubjectId = selectedClass.optString("subjectId")
+                    selectedSubjectTitle = selectedClass.optString("subjectName", getString(R.string.default_subject))
+                    selectedGrade = selectedClass.optString("grade", "")
+                    selectedSection = selectedClass.optString("section", "")
                 }
             }
             override fun onNothingSelected(p0: android.widget.AdapterView<*>?) {}
@@ -229,6 +245,10 @@ class AddLessonActivity : AppCompatActivity() {
             put("id", DataManager.generateLessonId() as Any)
             put("teacherId", teacherId as Any)
             put("classId", selectedClassId as Any)
+            put("subjectId", selectedSubjectId as Any)
+            put("subjectTitle", selectedSubjectTitle as Any)
+            put("grade", selectedGrade as Any)
+            put("section", selectedSection as Any)
             put("unit", selectedUnit as Any)
             put("title", title as Any)
             put("content", binding.contentInput.text.toString() as Any)

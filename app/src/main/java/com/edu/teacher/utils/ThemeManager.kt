@@ -20,6 +20,7 @@ object ThemeManager {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun toggleTheme(context: Context, prefs: SharedPreferences) {
         val currentMode = prefs.getString("theme", "light")
         val newMode = if (currentMode == "dark") "light" else "dark"
@@ -28,6 +29,7 @@ object ThemeManager {
         applyTheme(newMode)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun toggleThemeWithDebounce(enableDark: Boolean, debounceMs: Long = 400) {
         try {
             val prefs = com.edu.teacher.TeacherApp.instance.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)

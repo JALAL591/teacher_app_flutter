@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import com.edu.student.data.preferences.StudentPreferences
+import com.edu.student.utils.PermissionHelper
 
 class StudentApp : Application() {
     
@@ -40,11 +41,16 @@ class StudentApp : Application() {
         super.onCreate()
         instance = this
         syncTheme()
+        createNotificationChannel()
     }
     
     private fun syncTheme() {
         val prefs = StudentPreferences(this)
         val theme = prefs.getTheme()
         applyTheme(theme)
+    }
+    
+    private fun createNotificationChannel() {
+        PermissionHelper.createNotificationChannel(this)
     }
 }

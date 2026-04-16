@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.edu.teacher.databinding.ActivityStatsBinding
 import com.edu.teacher.databinding.ItemStudentStatsBinding
 import com.edu.teacher.databinding.ItemSubjectBinding
+import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -28,6 +29,9 @@ import java.util.Locale
 class StatsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityStatsBinding
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    
+    private var teacherServer: TeacherServer? = null
 
     private var subjectsList = mutableListOf<JSONObject>()
     private var activeSubject: JSONObject? = null
@@ -66,9 +70,21 @@ class StatsActivity : AppCompatActivity() {
             finish()
             return
         }
-
+        
+        teacherServer = (application as TeacherApp).teacherServer
+        
         initViews()
         loadSubjects()
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        syncData()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
     }
 
     private fun initViews() {
@@ -139,48 +155,68 @@ class StatsActivity : AppCompatActivity() {
         if (activeSubject == null) return
 
         binding.syncButton.isEnabled = false
-
+        
         val subjectId = activeSubject?.optString("id") ?: ""
         val classes = DataManager.getClasses(this, teacherId, subjectId)
+        
+        if (classes.isEmpty()) {
+            binding.syncButton.isEnabled = true
+            return
+        }
+        
+        val currentClass = classes.firstOrNull()
+        val grade = currentClass?.optString("grade", "") ?: ""
+        val section = currentClass?.optString("section", "") ?: ""
 
-        // محاكاة بيانات الطلاب
-        val mockStudents = listOf(
-            StudentItem(DataManager.generateSubmissionId(), getString(R.string.mock_student_1), 85, mutableListOf()),
-            StudentItem(DataManager.generateSubmissionId(), getString(R.string.mock_student_2), 92, mutableListOf()),
-            StudentItem(DataManager.generateSubmissionId(), getString(R.string.mock_student_3), 78, mutableListOf()),
-            StudentItem(DataManager.generateSubmissionId(), getString(R.string.mock_student_4), 96, mutableListOf())
-        )
-
-        studentsList.clear()
-        studentsList.addAll(mockStudents)
-
-        // تحميل سجل الحضور
-        classes.forEach { cls ->
-            val classId = cls.optString("id")
-            val historyMap = DataManager.getAttendance(this, classId)
-            studentsList.forEach { student ->
-                val historyArray = historyMap.optJSONArray(student.id)
-                if (historyArray != null) {
-                    student.attendanceHistory.clear()
-                    for (i in 0 until historyArray.length()) {
-                        val record = historyArray.getJSONObject(i)
-                        student.attendanceHistory.add(AttendanceRecord(
-                            record.optString("date"), record.optString("status")
-                        ))
+        scope.launch(Dispatchers.IO) {
+            val realStudents = teacherServer?.getStudentsBySubject(subjectId, grade, section) ?: emptyList()
+            
+            withContext(Dispatchers.Main) {
+                studentsList.clear()
+                
+                if (realStudents.isEmpty()) {
+                    binding.syncButton.isEnabled = true
+                    Toast.makeText(this@StatsActivity, getString(R.string.toast_no_students), Toast.LENGTH_SHORT).show()
+                    updateStats()
+                    binding.studentsRecyclerView.adapter = StudentsAdapter(studentsList) { student, status ->
+                        markAttendance(student, status)
                     }
+                    return@withContext
                 }
+                
+                realStudents.forEach { studentInfo ->
+                    val classId = currentClass?.optString("id") ?: ""
+                    val historyMap = DataManager.getAttendance(this@StatsActivity, classId)
+                    
+                    val studentItem = StudentItem(
+                        studentInfo.id,
+                        studentInfo.name,
+                        studentInfo.points,
+                        mutableListOf()
+                    )
+                    
+                    val historyArray = historyMap.optJSONArray(studentInfo.id)
+                    if (historyArray != null) {
+                        for (i in 0 until historyArray.length()) {
+                            val record = historyArray.getJSONObject(i)
+                            studentItem.attendanceHistory.add(AttendanceRecord(
+                                record.optString("date"), record.optString("status")
+                            ))
+                        }
+                    }
+                    
+                    studentsList.add(studentItem)
+                }
+                
+                updateStats()
+                binding.studentsRecyclerView.adapter = StudentsAdapter(studentsList) { student, status ->
+                    markAttendance(student, status)
+                }
+                
+                Toast.makeText(this@StatsActivity, getString(R.string.toast_students_fetched, studentsList.size), Toast.LENGTH_SHORT).show()
+                binding.syncButton.isEnabled = true
             }
         }
-
-        // تحديث الإحصائيات
-        updateStats()
-
-        binding.studentsRecyclerView.adapter = StudentsAdapter(studentsList) { student, status ->
-            markAttendance(student, status)
-        }
-
-        Toast.makeText(this, getString(R.string.toast_students_fetched, studentsList.size), Toast.LENGTH_SHORT).show()
-        binding.syncButton.isEnabled = true
     }
 
     private fun updateStats() {

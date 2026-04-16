@@ -27,8 +27,9 @@
     <string name="stat_students">طلاب</string>
     <string name="stat_classes">فصول</string>
     <string name="stat_points">نقاط</string>
-    <string name="stat_students_value">0</string>
+    <string name="mock_grade">Grade</string>
     <string name="stat_students_label">طلاب</string>
+    <string name="stat_students_value">0</string>
     <string name="stat_classes_value">0</string>
     <string name="stat_classes_label">فصول</string>
     <string name="stat_points_value">0</string>
@@ -260,17 +261,8 @@
     <string name="attendance_absent">غائب</string>
     <string name="points_format">%1$d نقطة</string>
 
-    <!-- ===== Mock Data ===== -->
-    <string name="mock_student_1">أحمد محمد</string>
-    <string name="mock_student_2">فاطمة علي</string>
-    <string name="mock_student_3">يوسف حسن</string>
-    <string name="mock_student_4">سارة خالد</string>
-    <string name="mock_grade">الأول</string>
-    <string name="mock_section">أ</string>
-    <string name="mock_subject_math">الرياضيات</string>
-    <string name="mock_subject_science">العلوم</string>
-    <string name="mock_lesson_math">جمع الكسور</string>
-    <string name="mock_lesson_science">الجهاز الهضمي</string>
+    <!-- ===== Real Data Messages ===== -->
+    <string name="toast_no_students">\u26A0\uFE0F لا يوجد طلاب متصلين حالياً</string>
     <string name="default_student">طالب</string>
     <string name="default_activity">نشاط</string>
 

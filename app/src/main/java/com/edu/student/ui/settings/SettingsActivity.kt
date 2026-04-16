@@ -255,7 +255,7 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         }
 
         if (isTeacherNearby) {
-            teacherClient.sendData(mapOf(
+            teacherClient.sendCustomData(mapOf(
                 "type" to "REGISTER_STUDENT",
                 "studentId" to (student?.id ?: ""),
                 "studentName" to (student?.name ?: ""),

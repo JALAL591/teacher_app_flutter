@@ -20,6 +20,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.edu.teacher.databinding.ActivityDashboardBinding
 import com.edu.teacher.databinding.ItemClassBinding
+import com.edu.teacher.utils.PermissionHelper
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
@@ -38,8 +39,43 @@ class DashboardActivity : BaseActivity() {
         binding = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        PermissionHelper.createNotificationChannel(this)
+        checkPermissions()
         initViews()
         scheduleAutoSync()
+    }
+    
+    private fun checkPermissions() {
+        if (!PermissionHelper.hasAllPermissions(this)) {
+            PermissionHelper.requestPermissions(this)
+        }
+        
+        if (!PermissionHelper.hasNotificationPermission(this)) {
+            PermissionHelper.requestNotificationPermission(this)
+        }
+    }
+    
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        PermissionHelper.onRequestPermissionsResult(
+            requestCode,
+            grantResults,
+            onGranted = {
+                Toast.makeText(this, "تم منح جميع الصلاحيات", Toast.LENGTH_SHORT).show()
+            },
+            onDenied = { denied ->
+                Toast.makeText(
+                    this,
+                    "بعض الصلاحيات مرفوضة: ${denied.joinToString(", ")}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        )
     }
 
     override fun onResume() {

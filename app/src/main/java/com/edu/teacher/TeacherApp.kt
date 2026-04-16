@@ -7,6 +7,8 @@ import com.edu.teacher.utils.ThemeManager
 
 class TeacherApp : Application() {
     
+    var teacherServer: TeacherServer? = null
+    
     companion object {
         lateinit var instance: TeacherApp
             private set

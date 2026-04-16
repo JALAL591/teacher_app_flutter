@@ -1,9 +1,7 @@
 package com.edu.teacher
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
-import com.google.gson.Gson
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -17,14 +15,13 @@ class TeacherServer(private val context: Context) {
     
     companion object {
         private const val TAG = "TeacherServer"
-        private const val SERVER_PORT = 9999
-        private const val BROADCAST_PORT = 9998
+        const val SERVER_PORT = 9999
     }
     
     private var serverSocket: ServerSocket? = null
-    private var isRunning = false
+    var isRunning = false
+        private set
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val gson = Gson()
     
     private val connectedClients = mutableSetOf<PrintWriter>()
     private val clientReaders = mutableMapOf<PrintWriter, BufferedReader>()
@@ -32,10 +29,29 @@ class TeacherServer(private val context: Context) {
     var teacherId: String = ""
         private set
     
-    var onStudentConnected: ((String, String) -> Unit)? = null
+    var onStudentConnected: ((String, String, String, String) -> Unit)? = null
     var onStudentDisconnected: ((String) -> Unit)? = null
     var onLessonsRequested: ((String, String, String) -> Unit)? = null
     var onHomeworkSubmitted: ((Map<String, Any?>) -> Unit)? = null
+    
+    private val registeredStudents = mutableMapOf<String, StudentInfo>()
+    
+    data class StudentInfo(
+        val id: String,
+        val name: String,
+        val grade: String,
+        val section: String,
+        var points: Int = 0
+    )
+    
+    fun getRegisteredStudents(): List<StudentInfo> = registeredStudents.values.toList()
+    
+    @Suppress("UNUSED_PARAMETER")
+    fun getStudentsBySubject(subjectId: String, grade: String, section: String): List<StudentInfo> {
+        return registeredStudents.values.filter { student ->
+            student.grade == grade && student.section == section
+        }
+    }
     
     fun start() {
         if (isRunning) return
@@ -52,118 +68,67 @@ class TeacherServer(private val context: Context) {
         scope.launch {
             try {
                 serverSocket = ServerSocket(SERVER_PORT)
-                Log.d(TAG, "Server started on port $SERVER_PORT")
-                
-                startBroadcast()
+                Log.d(TAG, "Server started on port $SERVER_PORT - IP: 192.168.43.1")
                 
                 while (isRunning) {
                     try {
                         val client = serverSocket!!.accept()
+                        Log.d(TAG, "Student connected from: ${client.inetAddress.hostAddress}")
                         scope.launch { handleClient(client) }
                     } catch (e: Exception) {
                         if (isRunning) Log.e(TAG, "Error accepting client", e)
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Server error", e)
+                Log.e(TAG, "Server error: ${e.message}", e)
                 isRunning = false
-            }
-        }
-        
-        scope.launch {
-            startUDPListener()
-        }
-    }
-    
-    private fun startBroadcast() {
-        scope.launch(Dispatchers.IO) {
-            try {
-                val socket = java.net.DatagramSocket()
-                socket.broadcast = true
-                
-                while (isRunning) {
-                    val broadcastData = JSONObject().apply {
-                        put("type", "TEACHER_ANNOUNCE")
-                        put("teacherId", teacherId)
-                        put("port", SERVER_PORT)
-                        put("version", "1.0")
-                    }.toString()
-                    
-                    val packet = java.net.DatagramPacket(
-                        broadcastData.toByteArray(),
-                        broadcastData.length,
-                        java.net.InetAddress.getByName("255.255.255.255"),
-                        BROADCAST_PORT
-                    )
-                    
-                    socket.send(packet)
-                    delay(3000)
-                }
-                
-                socket.close()
-            } catch (e: Exception) {
-                Log.e(TAG, "Broadcast error", e)
-            }
-        }
-    }
-    
-    private suspend fun startUDPListener() {
-        withContext(Dispatchers.IO) {
-            try {
-                val socket = java.net.DatagramSocket(BROADCAST_PORT)
-                socket.broadcast = true
-                val buffer = ByteArray(1024)
-                
-                while (isRunning) {
-                    val packet = java.net.DatagramPacket(buffer, buffer.size)
-                    socket.receive(packet)
-                    
-                    val data = String(packet.data, 0, packet.length)
-                    Log.d(TAG, "UDP received: $data")
-                }
-                
-                socket.close()
-            } catch (e: Exception) {
-                Log.e(TAG, "UDP listener error", e)
             }
         }
     }
     
     private suspend fun handleClient(client: Socket) = withContext(Dispatchers.IO) {
+        lateinit var reader: BufferedReader
+        lateinit var writer: PrintWriter
+        var currentStudentId = ""
+        
         try {
-            val reader = BufferedReader(InputStreamReader(client.getInputStream()))
-            val writer = PrintWriter(client.getOutputStream(), true)
+            reader = BufferedReader(InputStreamReader(client.getInputStream()))
+            writer = PrintWriter(client.getOutputStream(), true)
             
             connectedClients.add(writer)
             clientReaders[writer] = reader
             
             Log.d(TAG, "Client connected: ${client.inetAddress.hostAddress}")
             
-            var clientId = ""
-            
             while (isRunning) {
                 val line = reader.readLine() ?: break
-                handleMessage(line, writer, clientId) { id -> clientId = id }
+                handleMessage(line, writer, currentStudentId) { id -> currentStudentId = id }
             }
             
         } catch (e: Exception) {
-            Log.e(TAG, "Client handler error", e)
+            Log.e(TAG, "Client handler error: ${e.message}", e)
         } finally {
-            connectedClients.removeAll { it == writer }
+            if (currentStudentId.isNotEmpty()) {
+                registeredStudents.remove(currentStudentId)
+            }
+            connectedClients.remove(writer)
             clientReaders.remove(writer)
-            try { client.close() } catch (e: Exception) { }
+            try { 
+                client.close() 
+            } catch (e: Exception) { }
             
             val prefs = context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
-            val teacherId = prefs.getString("teacher_id", "") ?: ""
-            onStudentDisconnected?.invoke(teacherId)
+            val tId = prefs.getString("teacher_id", "") ?: ""
+            onStudentDisconnected?.invoke(tId)
         }
     }
     
+    @Suppress("UNUSED_PARAMETER")
     private fun handleMessage(
         message: String,
         writer: PrintWriter,
-        clientId: String,
-        setClientId: (String) -> Unit
+        @Suppress("UNUSED_PARAMETER") currentStudentId: String,
+        setStudentId: (String) -> Unit
     ) {
         try {
             val json = JSONObject(message)
@@ -171,11 +136,22 @@ class TeacherServer(private val context: Context) {
             
             when (type) {
                 "REGISTER_STUDENT" -> {
-                    val studentId = json.optString("studentId", "")
+                    val newStudentId = json.optString("studentId", "")
                     val studentName = json.optString("studentName", "")
-                    setClientId(studentId)
-                    onStudentConnected?.invoke(studentId, studentName)
-                    sendAck(writer, "REGISTERED", studentId)
+                    val grade = json.optString("grade", "")
+                    val section = json.optString("section", "")
+                    setStudentId(newStudentId)
+                    
+                    registeredStudents[newStudentId] = StudentInfo(
+                        id = newStudentId,
+                        name = studentName,
+                        grade = grade,
+                        section = section,
+                        points = 0
+                    )
+                    
+                    onStudentConnected?.invoke(newStudentId, studentName, grade, section)
+                    sendAck(writer, "REGISTERED", newStudentId)
                 }
                 
                 "REQUEST_LESSONS" -> {
@@ -200,29 +176,52 @@ class TeacherServer(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing message", e)
+            Log.e(TAG, "Error parsing message: ${e.message}", e)
         }
     }
     
     private fun getLessonsForClass(grade: String, section: String): List<JSONObject> {
         val lessons = mutableListOf<JSONObject>()
-        val prefs = context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
-        val teacherId = prefs.getString("teacher_id", "") ?: return lessons
+        val teacherIdValue = teacherId.ifEmpty {
+            context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
+        }
+        if (teacherIdValue.isEmpty()) return lessons
         
-        val lessonsJson = prefs.getString("lessons_$teacherId", "[]") ?: "[]"
-        try {
-            val jsonArray = JSONArray(lessonsJson)
-            for (i in 0 until jsonArray.length()) {
-                val lesson = jsonArray.getJSONObject(i)
-                val lessonGrade = lesson.optString("grade", "")
-                val lessonSection = lesson.optString("section", "")
-                if ((grade.isEmpty() || lessonGrade == grade) && 
-                    (section.isEmpty() || lessonSection == section)) {
-                    lessons.add(lesson)
+        val prefs = context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
+        
+        val subjects = DataManager.getSubjects(context, teacherIdValue)
+        for (subject in subjects) {
+            val subjectId = subject.optString("id")
+            val classes = DataManager.getClasses(context, teacherIdValue, subjectId)
+            for (cls in classes) {
+                val classId = cls.optString("id")
+                val classGrade = cls.optString("grade", "")
+                val classSection = cls.optString("section", "")
+                
+                val key = "lessons_${teacherIdValue}_$classId"
+                val lessonsJson = prefs.getString(key, "[]") ?: "[]"
+                
+                try {
+                    val jsonArray = JSONArray(lessonsJson)
+                    for (i in 0 until jsonArray.length()) {
+                        val lesson = jsonArray.getJSONObject(i)
+                        
+                        val lessonGrade = lesson.optString("grade", classGrade)
+                        val lessonSection = lesson.optString("section", classSection)
+                        
+                        val gradeMatch = grade.isEmpty() || lessonGrade == grade || classGrade == grade
+                        val sectionMatch = section.isEmpty() || lessonSection == section || classSection == section
+                        
+                        if (gradeMatch && sectionMatch) {
+                            lesson.put("subjectId", subjectId)
+                            lesson.put("subjectTitle", subject.optString("name", ""))
+                            lessons.add(lesson)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading lessons for class $classId", e)
                 }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading lessons", e)
         }
         
         return lessons
@@ -237,43 +236,79 @@ class TeacherServer(private val context: Context) {
     }
     
     private fun sendLessons(writer: PrintWriter, lessons: List<JSONObject>) {
+        val lessonsArray = JSONArray()
+        lessons.forEach { lessonsArray.put(it) }
+        
         val response = JSONObject().apply {
             put("action", "LESSONS_DATA")
-            put("lessons", JSONArray(lessons.map { it.toString() }))
+            put("lessons", lessonsArray)
         }
         writer.println(response.toString())
     }
     
     fun broadcastLesson(lesson: JSONObject) {
         scope.launch(Dispatchers.IO) {
-            val message = JSONObject().apply {
-                put("action", "LESSON_BROADCAST")
-                put("lesson", lesson)
+            val teacherIdValue = teacherId.ifEmpty {
+                context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
             }
             
+            val lessonWithSubject = JSONObject(lesson.toString())
+            val classId = lesson.optString("classId", "")
+            
+            val subjects = DataManager.getSubjects(context, teacherIdValue)
+            for (subject in subjects) {
+                val subjectId = subject.optString("id")
+                val classes = DataManager.getClasses(context, teacherIdValue, subjectId)
+                if (classes.any { it.optString("id") == classId }) {
+                    lessonWithSubject.put("subjectId", subjectId)
+                    lessonWithSubject.put("subjectTitle", subject.optString("name", ""))
+                    break
+                }
+            }
+            
+            val message = JSONObject().apply {
+                put("action", "LESSON_BROADCAST")
+                put("lesson", lessonWithSubject)
+            }
+            
+            val messageStr = message.toString()
             connectedClients.forEach { writer ->
                 try {
-                    writer.println(message.toString())
+                    writer.println(messageStr)
+                    Log.d(TAG, "Broadcasted lesson to client: ${lesson.optString("title")}")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error broadcasting lesson", e)
                 }
+            }
+            
+            if (connectedClients.isEmpty()) {
+                Log.d(TAG, "No students connected to broadcast to")
             }
         }
     }
     
     fun broadcastLessonsUpdate(lessons: List<JSONObject>) {
         scope.launch(Dispatchers.IO) {
+            val lessonsArray = JSONArray()
+            lessons.forEach { lessonsArray.put(it) }
+            
             val message = JSONObject().apply {
                 put("action", "LESSONS_DATA")
-                put("lessons", JSONArray(lessons.map { it.toString() }))
+                put("lessons", lessonsArray)
             }
             
+            val messageStr = message.toString()
             connectedClients.forEach { writer ->
                 try {
-                    writer.println(message.toString())
+                    writer.println(messageStr)
+                    Log.d(TAG, "Broadcasted ${lessons.size} lessons to clients")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error broadcasting lessons", e)
                 }
+            }
+            
+            if (connectedClients.isEmpty()) {
+                Log.d(TAG, "No students connected to broadcast to")
             }
         }
     }
@@ -299,7 +334,9 @@ class TeacherServer(private val context: Context) {
 
 private fun JSONObject.toMap(): Map<String, Any?> {
     val map = mutableMapOf<String, Any?>()
-    keys().forEach { key ->
+    val keys = keys()
+    while (keys.hasNext()) {
+        val key = keys.next()
         map[key] = get(key)
     }
     return map

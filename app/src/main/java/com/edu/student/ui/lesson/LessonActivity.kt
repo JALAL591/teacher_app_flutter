@@ -1,7 +1,6 @@
 package com.edu.student.ui.lesson
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
@@ -17,9 +16,8 @@ import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.databinding.*
 import com.edu.student.data.repository.StudentRepository
-import com.edu.student.domain.model.Lesson
 import com.edu.student.domain.model.Question
-import com.edu.student.services.SyncService
+import com.edu.student.services.TeacherClient
 import com.edu.student.ui.common.QuestionAdapter
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -27,11 +25,11 @@ import java.io.InputStream
 import java.net.URL
 import java.util.*
 
-class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
+class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, TeacherClient.ClientCallback {
     
     private lateinit var binding: StudentActivityLessonBinding
     private lateinit var repository: StudentRepository
-    private lateinit var syncService: SyncService
+    private lateinit var teacherClient: TeacherClient
     
     private var subjectId = ""
     private var subjectTitle = ""
@@ -47,6 +45,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     
     private var homeworkImageBase64: String? = null
     private var questions: List<Question> = emptyList()
+    private var homeworkSubmitted = false
     
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { handleHomeworkImage(it) }
@@ -58,7 +57,8 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(binding.root)
         
         repository = StudentRepository(this)
-        syncService = SyncService(this)
+        teacherClient = TeacherClient(this)
+        teacherClient.setCallback(this)
         tts = TextToSpeech(this, this)
         
         extractIntentData()
@@ -69,6 +69,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onDestroy() {
         tts?.stop()
         tts?.shutdown()
+        teacherClient.destroy()
         super.onDestroy()
     }
     
@@ -304,7 +305,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             inputStream?.close()
             
             val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, outputStream)
             val byteArray = outputStream.toByteArray()
             homeworkImageBase64 = Base64.encodeToString(byteArray, Base64.DEFAULT)
             
@@ -319,29 +320,33 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
     
     private fun submitHomework() {
+        if (homeworkSubmitted) {
+            Toast.makeText(this, "تم إرسال الواجب مسبقاً", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
         binding.submitHomeworkButton.isEnabled = false
         binding.submitHomeworkButton.text = "جاري الإرسال..."
         
-        syncService.submitHomework(
-            lessonId = lessonId,
-            lessonTitle = lessonTitle,
-            subjectName = subjectTitle,
-            homeworkImage = homeworkImageBase64,
-            homeworkNote = "",
-            isCompleted = true
-        ) { success ->
-            runOnUiThread {
-                if (success) {
-                    Toast.makeText(this, "✅ تم إرسال الواجب بنجاح!", Toast.LENGTH_LONG).show()
-                    repository.addPoints(lessonId, "homework_submit", 20)
-                    updatePoints()
-                } else {
-                    Toast.makeText(this, "❌ فشل الإرسال", Toast.LENGTH_SHORT).show()
-                }
-                binding.submitHomeworkButton.isEnabled = true
-                binding.submitHomeworkButton.text = "إرسال الواجب للمعلم 📤"
-            }
-        }
+        val student = repository.getStudent()
+        
+        teacherClient.submitHomework(mapOf(
+            "studentId" to (student?.id ?: ""),
+            "studentName" to (student?.name ?: ""),
+            "lessonId" to lessonId,
+            "lessonTitle" to lessonTitle,
+            "subjectTitle" to subjectTitle,
+            "homeworkImage" to homeworkImageBase64,
+            "homeworkNote" to "",
+            "isCompleted" to true
+        ))
+        
+        homeworkSubmitted = true
+        repository.addPoints(lessonId, "homework_submit", 20)
+        updatePoints()
+        
+        Toast.makeText(this, "تم إرسال الواجب للمعلم!", Toast.LENGTH_LONG).show()
+        binding.submitHomeworkButton.text = "تم الإرسال ✓"
     }
     
     override fun onInit(status: Int) {
@@ -352,4 +357,12 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }
     }
+    
+    override fun onConnected(ip: String) {}
+    
+    override fun onDisconnected() {}
+    
+    override fun onLessonsReceived(lessons: List<com.edu.student.domain.model.Lesson>) {}
+    
+    override fun onError(error: String) {}
 }
