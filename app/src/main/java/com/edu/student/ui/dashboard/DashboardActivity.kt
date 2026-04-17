@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.databinding.*
+import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Subject
 import com.edu.student.services.TeacherClient
@@ -22,7 +23,9 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     
     private lateinit var binding: StudentActivityDashboardBinding
     private lateinit var repository: StudentRepository
-    private lateinit var teacherClient: TeacherClient
+    private val teacherClient: TeacherClient by lazy { 
+        StudentApp.getTeacherClient(this) 
+    }
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var refreshJob: Job? = null
@@ -42,12 +45,10 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             return
         }
         
-        teacherClient = TeacherClient(this)
         teacherClient.setCallback(this)
         
         setupViews()
         loadData()
-        initTeacherConnection()
     }
     
     private fun checkPermissions() {
@@ -92,7 +93,7 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         super.onDestroy()
         refreshJob?.cancel()
         scope.cancel()
-        teacherClient.destroy()
+        teacherClient.setCallback(null)
     }
     
     private fun setupViews() {
@@ -164,10 +165,6 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             }
             startActivity(intent)
         }
-    }
-    
-    private fun initTeacherConnection() {
-        teacherClient.init()
     }
     
     override fun onConnected(ip: String) {

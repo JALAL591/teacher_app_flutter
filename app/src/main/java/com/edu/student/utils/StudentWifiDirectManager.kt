@@ -145,10 +145,13 @@ class StudentWifiDirectManager(private val context: Context) {
         
         manager?.requestPeers(channel) { peers ->
             val teacherDevices = peers.deviceList.filter { 
-                it.isGroupOwner || it.deviceName.contains("Teacher", ignoreCase = true)
+                it.isGroupOwner || it.deviceName.contains("Teacher", ignoreCase = true) || !it.deviceName.isEmpty()
             }
+            Log.d(TAG, "Found ${peers.deviceList.size} peers, teachers: ${teacherDevices.size}")
             if (teacherDevices.isNotEmpty()) {
                 onPeersAvailable?.invoke(teacherDevices)
+            } else if (peers.deviceList.isNotEmpty()) {
+                onPeersAvailable?.invoke(peers.deviceList.toList())
             }
         }
     }

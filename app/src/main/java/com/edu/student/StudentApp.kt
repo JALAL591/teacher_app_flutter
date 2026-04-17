@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import com.edu.student.data.preferences.StudentPreferences
+import com.edu.student.services.TeacherClient
 import com.edu.student.utils.PermissionHelper
 
 class StudentApp : Application() {
@@ -20,6 +21,17 @@ class StudentApp : Application() {
         fun isInitialized(): Boolean = _instance != null
         
         fun getInstanceSafe(): StudentApp? = _instance
+        
+        private var _teacherClient: TeacherClient? = null
+        
+        @Synchronized
+        fun getTeacherClient(context: Context): TeacherClient {
+            if (_teacherClient == null) {
+                _teacherClient = TeacherClient(context.applicationContext)
+                _teacherClient?.init()
+            }
+            return _teacherClient!!
+        }
         
         private fun applyTheme(mode: String) {
             when (mode) {
@@ -57,6 +69,7 @@ class StudentApp : Application() {
     override fun onCreate() {
         super.onCreate()
         _instance = this
+        getTeacherClient(this)
         syncTheme()
         createNotificationChannel()
     }

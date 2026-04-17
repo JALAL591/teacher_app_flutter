@@ -25,6 +25,7 @@ class TeacherServer(private val context: Context) {
     
     private val connectedClients = mutableSetOf<PrintWriter>()
     private val clientReaders = mutableMapOf<PrintWriter, BufferedReader>()
+    private val clientSockets = mutableMapOf<PrintWriter, Socket>()
     
     var teacherId: String = ""
         private set
@@ -100,6 +101,7 @@ class TeacherServer(private val context: Context) {
             
             connectedClients.add(writer)
             clientReaders[writer] = reader
+            clientSockets[writer] = client
             
             Log.d(TAG, "Client connected: ${client.inetAddress.hostAddress}")
             
@@ -123,6 +125,7 @@ class TeacherServer(private val context: Context) {
             }
             connectedClients.remove(writer)
             clientReaders.remove(writer)
+            clientSockets.remove(writer)
             try { 
                 client.close() 
             } catch (e: Exception) { }
@@ -197,43 +200,39 @@ class TeacherServer(private val context: Context) {
         }
         if (teacherIdValue.isEmpty()) return lessons
         
-        val prefs = context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
-        
         val subjects = DataManager.getSubjects(context, teacherIdValue)
+        
         for (subject in subjects) {
             val subjectId = subject.optString("id")
+            val subjectTitle = subject.optString("name", "")
+            
             val classes = DataManager.getClasses(context, teacherIdValue, subjectId)
+            
             for (cls in classes) {
                 val classId = cls.optString("id")
                 val classGrade = cls.optString("grade", "")
                 val classSection = cls.optString("section", "")
                 
-                val key = "lessons_${teacherIdValue}_$classId"
-                val lessonsJson = prefs.getString(key, "[]") ?: "[]"
+                val gradeMatch = grade.isEmpty() || classGrade == grade
+                val sectionMatch = section.isEmpty() || classSection == section
                 
-                try {
-                    val jsonArray = JSONArray(lessonsJson)
-                    for (i in 0 until jsonArray.length()) {
-                        val lesson = jsonArray.getJSONObject(i)
+                if (gradeMatch && sectionMatch) {
+                    val classLessons = DataManager.getLessons(context, teacherIdValue, classId)
+                    
+                    for (lesson in classLessons) {
+                        lesson.put("subjectId", subjectId)
+                        lesson.put("subjectTitle", subjectTitle)
+                        lesson.put("grade", classGrade)
+                        lesson.put("section", classSection)
+                        lesson.put("classId", classId)
                         
-                        val lessonGrade = lesson.optString("grade", classGrade)
-                        val lessonSection = lesson.optString("section", classSection)
-                        
-                        val gradeMatch = grade.isEmpty() || lessonGrade == grade || classGrade == grade
-                        val sectionMatch = section.isEmpty() || lessonSection == section || classSection == section
-                        
-                        if (gradeMatch && sectionMatch) {
-                            lesson.put("subjectId", subjectId)
-                            lesson.put("subjectTitle", subject.optString("name", ""))
-                            lessons.add(lesson)
-                        }
+                        lessons.add(lesson)
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error loading lessons for class $classId", e)
                 }
             }
         }
         
+        Log.d(TAG, "Found ${lessons.size} lessons for grade=$grade, section=$section")
         return lessons
     }
     
@@ -245,16 +244,41 @@ class TeacherServer(private val context: Context) {
             }
             val jsonString = response.toString()
             if (isValidJson(jsonString)) {
-                try {
-                    writer.println(jsonString)
-                } catch (e: java.io.IOException) {
-                    Log.e(TAG, "Write error sending ack: ${e.message}", e)
-                }
+                safeSendToClient(writer, jsonString)
             } else {
                 Log.w(TAG, "Invalid JSON generated for ack")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error sending ack", e)
+        }
+    }
+    
+    private fun safeSendToClient(writer: PrintWriter, data: String): Boolean {
+        return try {
+            writer.println(data)
+            true
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "Client disconnected during send")
+            removeDisconnectedClient(writer)
+            false
+        }
+    }
+    
+    private fun removeDisconnectedClient(writer: PrintWriter) {
+        synchronized(connectedClients) {
+            connectedClients.remove(writer)
+        }
+        synchronized(clientReaders) {
+            val reader = clientReaders.remove(writer)
+            try {
+                reader?.close()
+            } catch (e: Exception) { }
+        }
+        synchronized(clientSockets) {
+            val socket = clientSockets.remove(writer)
+            try {
+                socket?.close()
+            } catch (e: Exception) { }
         }
     }
 
@@ -269,10 +293,20 @@ class TeacherServer(private val context: Context) {
     
     private fun sendLessons(writer: PrintWriter, lessons: List<JSONObject>) {
         try {
+            val teacherIdValue = teacherId.ifEmpty {
+                context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
+            }
+            
             val lessonsArray = JSONArray()
             lessons.forEach { lesson ->
                 try {
                     val cleanLesson = sanitizeJsonObject(lesson)
+                    val classId = cleanLesson.optString("classId", "")
+                    
+                    val classInfo = DataManager.getClassById(context, teacherIdValue, classId)
+                    cleanLesson.put("grade", classInfo?.optString("grade", "") ?: "")
+                    cleanLesson.put("section", classInfo?.optString("section", "") ?: "")
+                    
                     lessonsArray.put(cleanLesson)
                 } catch (e: Exception) {
                     Log.e(TAG, "Error processing lesson", e)
@@ -286,12 +320,8 @@ class TeacherServer(private val context: Context) {
             
             val jsonString = response.toString()
             if (isValidJson(jsonString)) {
-                try {
-                    writer.println(jsonString)
-                    Log.d(TAG, "Sent ${lessons.size} lessons as valid JSON")
-                } catch (e: java.io.IOException) {
-                    Log.e(TAG, "Write error sending lessons: ${e.message}", e)
-                }
+                safeSendToClient(writer, jsonString)
+                Log.d(TAG, "Sent ${lessons.size} lessons")
             } else {
                 Log.w(TAG, "Invalid JSON generated for lessons")
             }
@@ -325,20 +355,26 @@ class TeacherServer(private val context: Context) {
                 val lessonWithSubject = sanitizeJsonObject(lesson)
                 val classId = lessonWithSubject.optString("classId", "")
                 
-                val subjects = DataManager.getSubjects(context, teacherIdValue)
-                for (subject in subjects) {
-                    val subjectId = subject.optString("id")
-                    val classes = DataManager.getClasses(context, teacherIdValue, subjectId)
-                    if (classes.any { it.optString("id") == classId }) {
-                        lessonWithSubject.put("subjectId", subjectId)
-                        lessonWithSubject.put("subjectTitle", subject.optString("name", ""))
-                        break
-                    }
-                }
+                val classInfo = DataManager.getClassById(context, teacherIdValue, classId)
+                val classGrade = classInfo?.optString("grade", "") ?: ""
+                val classSection = classInfo?.optString("section", "") ?: ""
+                
+                val subject = DataManager.getSubjectForClass(context, teacherIdValue, classId)
+                val subjectId = subject?.optString("id", "") ?: ""
+                val subjectTitle = subject?.optString("name", "") ?: ""
+                
+                lessonWithSubject.put("subjectId", subjectId)
+                lessonWithSubject.put("subjectTitle", subjectTitle)
+                lessonWithSubject.put("grade", classGrade)
+                lessonWithSubject.put("section", classSection)
                 
                 val message = JSONObject().apply {
                     put("action", "LESSON_BROADCAST")
                     put("lesson", lessonWithSubject)
+                    put("targetGrade", classGrade)
+                    put("targetSection", classSection)
+                    put("classId", classId)
+                    put("subjectId", subjectId)
                 }
                 
                 val messageStr = message.toString()
@@ -347,19 +383,24 @@ class TeacherServer(private val context: Context) {
                     return@launch
                 }
                 
-                connectedClients.forEach { writer ->
-                    try {
+                Log.d(TAG, "Broadcasting lesson to grade: $classGrade, section: $classSection, classId: $classId")
+                Log.d(TAG, "Lesson title: ${lesson.optString("title")}, Subject: $subjectTitle")
+                
+                val disconnectedWriters = mutableListOf<PrintWriter>()
+                synchronized(connectedClients) {
+                    connectedClients.forEach { writer ->
                         try {
                             writer.println(messageStr)
+                            Log.d(TAG, "Sent lesson to client")
                         } catch (e: java.io.IOException) {
-                            Log.e(TAG, "Write error broadcasting lesson: ${e.message}", e)
+                            Log.e(TAG, "Write error broadcasting lesson: ${e.message}")
+                            disconnectedWriters.add(writer)
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error broadcasting lesson", e)
                     }
                 }
+                disconnectedWriters.forEach { removeDisconnectedClient(it) }
                 
-                Log.d(TAG, "Broadcasted lesson to ${connectedClients.size} clients: ${lesson.optString("title")}")
+                Log.d(TAG, "Broadcasted lesson to ${connectedClients.size} clients")
             } catch (e: Exception) {
                 Log.e(TAG, "Error in broadcastLesson", e)
             }
@@ -369,10 +410,21 @@ class TeacherServer(private val context: Context) {
     fun broadcastLessonsUpdate(lessons: List<JSONObject>) {
         scope.launch(Dispatchers.IO) {
             try {
+                val teacherIdValue = teacherId.ifEmpty {
+                    context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
+                }
+                
                 val lessonsArray = JSONArray()
                 lessons.forEach { lesson ->
                     try {
-                        lessonsArray.put(sanitizeJsonObject(lesson))
+                        val cleanLesson = sanitizeJsonObject(lesson)
+                        val classId = cleanLesson.optString("classId", "")
+                        
+                        val classInfo = DataManager.getClassById(context, teacherIdValue, classId)
+                        cleanLesson.put("grade", classInfo?.optString("grade", "") ?: "")
+                        cleanLesson.put("section", classInfo?.optString("section", "") ?: "")
+                        
+                        lessonsArray.put(cleanLesson)
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing lesson for broadcast", e)
                     }
@@ -389,17 +441,15 @@ class TeacherServer(private val context: Context) {
                     return@launch
                 }
                 
-                connectedClients.forEach { writer ->
-                    try {
-                        try {
-                            writer.println(messageStr)
-                        } catch (e: java.io.IOException) {
-                            Log.e(TAG, "Write error broadcasting lessons: ${e.message}", e)
+                val disconnectedWriters = mutableListOf<PrintWriter>()
+                synchronized(connectedClients) {
+                    connectedClients.forEach { writer ->
+                        if (!safeSendToClient(writer, messageStr)) {
+                            disconnectedWriters.add(writer)
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error broadcasting lessons", e)
                     }
                 }
+                disconnectedWriters.forEach { removeDisconnectedClient(it) }
                 
                 Log.d(TAG, "Broadcasted ${lessons.size} lessons to ${connectedClients.size} clients")
             } catch (e: Exception) {
@@ -414,16 +464,86 @@ class TeacherServer(private val context: Context) {
         isRunning = false
         scope.cancel()
         
+        synchronized(connectedClients) {
+            connectedClients.forEach { writer ->
+                try {
+                    writer.close()
+                } catch (e: Exception) { }
+            }
+            connectedClients.clear()
+        }
+        
+        synchronized(clientReaders) {
+            clientReaders.forEach { (_, reader) ->
+                try {
+                    reader.close()
+                } catch (e: Exception) { }
+            }
+            clientReaders.clear()
+        }
+        
+        synchronized(clientSockets) {
+            clientSockets.forEach { (_, socket) ->
+                try {
+                    socket.close()
+                } catch (e: Exception) { }
+            }
+            clientSockets.clear()
+        }
+        
         try {
             serverSocket?.close()
         } catch (e: Exception) {
             Log.e(TAG, "Error closing server", e)
         }
         
-        connectedClients.clear()
-        clientReaders.clear()
+        serverSocket = null
+        
+        onStudentConnected = null
+        onStudentDisconnected = null
+        onLessonsRequested = null
+        onHomeworkSubmitted = null
+        
+        registeredStudents.clear()
         
         Log.d(TAG, "Server stopped")
+    }
+    
+    fun isServerAlive(): Boolean {
+        return try {
+            isRunning && serverSocket != null && !serverSocket!!.isClosed
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    fun restart() {
+        stop()
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            start()
+        }, 1000)
+    }
+    
+    fun cleanupDisconnectedClients() {
+        val toRemove = mutableListOf<PrintWriter>()
+        
+        synchronized(connectedClients) {
+            connectedClients.forEach { writer ->
+                try {
+                    writer.checkError()
+                } catch (e: Exception) {
+                    toRemove.add(writer)
+                }
+            }
+            
+            toRemove.forEach { writer ->
+                removeDisconnectedClient(writer)
+            }
+        }
+        
+        if (toRemove.isNotEmpty()) {
+            Log.d(TAG, "Cleaned up ${toRemove.size} disconnected clients")
+        }
     }
 }
 

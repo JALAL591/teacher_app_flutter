@@ -32,7 +32,9 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     private lateinit var binding: StudentActivitySettingsBinding
     private lateinit var repository: StudentRepository
     private lateinit var prefs: StudentPreferences
-    private lateinit var teacherClient: TeacherClient
+    private val teacherClient: TeacherClient by lazy { 
+        StudentApp.getTeacherClient(this) 
+    }
 
     private var isTeacherNearby = false
     private var syncingId: String? = null
@@ -57,12 +59,24 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
 
         repository = StudentRepository(this)
         prefs = StudentPreferences(this)
-        teacherClient = TeacherClient(this)
         teacherClient.setCallback(this)
+        updateConnectionUI()
 
         setupViews()
         loadStudentData()
-        initTeacherConnection()
+    }
+    
+    private fun updateConnectionUI() {
+        isTeacherNearby = teacherClient.isConnected
+        if (teacherClient.isConnected) {
+            binding.connectionCard.setBackgroundColor(android.graphics.Color.parseColor("#10B981"))
+            binding.connectionStatus.text = "المعلم متاح الآن بالقرب منك!"
+            binding.connectionHint.text = "يمكنك استلام الدروس مباشرة"
+        } else {
+            binding.connectionCard.setBackgroundColor(android.graphics.Color.parseColor("#9CA3AF"))
+            binding.connectionStatus.text = "يبحث عن رادار المعلم..."
+            binding.connectionHint.text = "تأكد من فتح المعلم لشبكة الـ Hotspot"
+        }
     }
 
     private fun setupViews() {
@@ -317,10 +331,6 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             .show()
     }
 
-    private fun initTeacherConnection() {
-        teacherClient.init()
-    }
-
     override fun onConnected(ip: String) {
         runOnUiThread {
             isTeacherNearby = true
@@ -355,6 +365,6 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
 
     override fun onDestroy() {
         super.onDestroy()
-        teacherClient.destroy()
+        teacherClient.setCallback(null)
     }
 }

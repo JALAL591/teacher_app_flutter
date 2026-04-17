@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.databinding.*
+import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Question
 import com.edu.student.services.TeacherClient
@@ -30,7 +31,9 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     
     private lateinit var binding: StudentActivityLessonBinding
     private lateinit var repository: StudentRepository
-    private lateinit var teacherClient: TeacherClient
+    private val teacherClient: TeacherClient by lazy { 
+        StudentApp.getTeacherClient(this) 
+    }
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
     private var subjectId = ""
@@ -59,7 +62,6 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         setContentView(binding.root)
         
         repository = StudentRepository(this)
-        teacherClient = TeacherClient(this)
         teacherClient.setCallback(this)
         tts = TextToSpeech(this, this)
         
@@ -71,7 +73,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     override fun onDestroy() {
         tts?.stop()
         tts?.shutdown()
-        teacherClient.destroy()
+        teacherClient.setCallback(null)
         scope.cancel()
         super.onDestroy()
     }
