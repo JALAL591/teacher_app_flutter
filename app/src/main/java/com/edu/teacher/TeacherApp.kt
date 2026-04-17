@@ -10,10 +10,20 @@ class TeacherApp : Application() {
     var teacherServer: TeacherServer? = null
     
     companion object {
-        lateinit var instance: TeacherApp
-            private set
+        private var _instance: TeacherApp? = null
+        
+        val instance: TeacherApp
+            get() = _instance ?: throw IllegalStateException(
+                "TeacherApp has not been initialized yet. " +
+                "Ensure Application.onCreate() has been called."
+            )
+        
+        fun isInitialized(): Boolean = _instance != null
+        
+        fun getInstanceSafe(): TeacherApp? = _instance
         
         fun toggleTheme(enableDark: Boolean) {
+            if (!isInitialized()) return
             val prefs = instance.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
             val theme = if (enableDark) "dark" else "light"
             prefs.edit().putString("theme", theme).apply()
@@ -43,7 +53,7 @@ class TeacherApp : Application() {
     
     override fun onCreate() {
         super.onCreate()
-        instance = this
+        _instance = this
         syncTheme()
     }
 }

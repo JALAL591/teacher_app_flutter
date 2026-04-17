@@ -117,6 +117,8 @@ class TeacherClient(private val context: Context) {
                 
                 socket = Socket(serverAddress, SERVER_PORT)
                 socket?.soTimeout = 0
+                socket?.keepAlive = true
+                socket?.tcpNoDelay = true
                 
                 reader = BufferedReader(InputStreamReader(socket!!.getInputStream()))
                 writer = PrintWriter(socket!!.getOutputStream(), true)
@@ -171,6 +173,11 @@ class TeacherClient(private val context: Context) {
                     if (line.isNotEmpty()) {
                         handleIncoming(line)
                     }
+                } catch (e: java.io.IOException) {
+                    if (isRunning) {
+                        Log.e(TAG, "Read error: ${e.message}", e)
+                        break
+                    }
                 } catch (e: Exception) {
                     if (isRunning) {
                         Log.e(TAG, "Read error: ${e.message}", e)
@@ -180,16 +187,20 @@ class TeacherClient(private val context: Context) {
             }
         } finally {
             if (isRunning && !isManualDisconnect) {
-                isConnected = false
-                withContext(Dispatchers.Main) {
-                    callback?.onDisconnected()
-                }
-                emit("disconnected", null)
-                
-                wifiDirectManager?.discoverTeachers()
-                scheduleRetry()
+                handleConnectionLost()
             }
         }
+    }
+    
+    private fun handleConnectionLost() {
+        isConnected = false
+        runOnUiThread {
+            callback?.onDisconnected()
+        }
+        emit("disconnected", null)
+        
+        wifiDirectManager?.discoverTeachers()
+        scheduleRetry()
     }
     
     private suspend fun handleIncoming(data: String) {
@@ -202,6 +213,40 @@ class TeacherClient(private val context: Context) {
                 json = JSONObject(trimmedData)
             } catch (e: Exception) {
                 Log.e(TAG, "Invalid JSON format: $trimmedData")
+                return
+            }
+            
+            if (json.has("id") && json.has("title") && json.has("questions")) {
+                Log.d(TAG, "Received direct lesson object: ${json.optString("title")}")
+                try {
+                    val lesson = gson.fromJson(json.toString(), com.edu.student.domain.model.Lesson::class.java)
+                    
+                    val teacherId = prefs.getAssignedTeacherId() ?: ""
+                    val cached = prefs.getCachedLessons(teacherId)
+                    val lessons = if (cached != null) {
+                        try {
+                            val type = object : TypeToken<MutableList<com.edu.student.domain.model.Lesson>>() {}.type
+                            gson.fromJson<MutableList<com.edu.student.domain.model.Lesson>>(cached, type)
+                        } catch (e: Exception) { 
+                            mutableListOf() 
+                        }
+                    } else { 
+                        mutableListOf() 
+                    }
+                    
+                    if (lessons.none { it.id == lesson.id }) {
+                        lessons.add(0, lesson)
+                        prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+                    }
+                    
+                    withContext(Dispatchers.Main) {
+                        callback?.onLessonsReceived(listOf(lesson))
+                    }
+                    emit("lesson_broadcast", lesson)
+                    
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error parsing direct lesson: ${e.message}", e)
+                }
                 return
             }
             
@@ -250,9 +295,14 @@ class TeacherClient(private val context: Context) {
                             } catch (e: Exception) { mutableListOf() }
                         } else { mutableListOf() }
                         
-                        lessons.add(0, lesson)
-                        prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+                        if (lessons.none { it.id == lesson.id }) {
+                            lessons.add(0, lesson)
+                            prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+                        }
                         
+                        withContext(Dispatchers.Main) {
+                            callback?.onLessonsReceived(listOf(lesson))
+                        }
                         emit("lesson_broadcast", lesson)
                     } else {
                         val lessonStr = json.optString("lesson", "")
@@ -270,9 +320,14 @@ class TeacherClient(private val context: Context) {
                                     } catch (e: Exception) { mutableListOf() }
                                 } else { mutableListOf() }
                                 
-                                lessons.add(0, lesson)
-                                prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+                                if (lessons.none { it.id == lesson.id }) {
+                                    lessons.add(0, lesson)
+                                    prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+                                }
                                 
+                                withContext(Dispatchers.Main) {
+                                    callback?.onLessonsReceived(listOf(lesson))
+                                }
                                 emit("lesson_broadcast", lesson)
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error parsing lesson from string", e)
@@ -302,11 +357,16 @@ class TeacherClient(private val context: Context) {
         }
         
         scope.launch(Dispatchers.IO) {
-            val data = payload.toMutableMap()
-            data["timestamp"] = System.currentTimeMillis().toString()
-            
-            val json = JSONObject(data).toString()
-            writer?.println(json)
+            try {
+                val data = payload.toMutableMap()
+                data["timestamp"] = System.currentTimeMillis().toString()
+                
+                val json = JSONObject(data).toString()
+                writer?.println(json)
+            } catch (e: java.io.IOException) {
+                Log.e(TAG, "Write error: ${e.message}", e)
+                handleConnectionLost()
+            }
         }
     }
     
@@ -362,7 +422,7 @@ class TeacherClient(private val context: Context) {
         
         retryJob?.cancel()
         retryJob = scope.launch {
-            delay(5000)
+            delay(1000)
             if (!isManualDisconnect && isRunning && !isConnected) {
                 Log.d(TAG, "Retrying connection...")
                 hasAutoRequested = false

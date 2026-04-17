@@ -92,6 +92,9 @@ class TeacherServer(private val context: Context) {
         var currentStudentId = ""
         
         try {
+            client.keepAlive = true
+            client.tcpNoDelay = true
+            
             reader = BufferedReader(InputStreamReader(client.getInputStream()))
             writer = PrintWriter(client.getOutputStream(), true)
             
@@ -101,10 +104,17 @@ class TeacherServer(private val context: Context) {
             Log.d(TAG, "Client connected: ${client.inetAddress.hostAddress}")
             
             while (isRunning) {
-                val line = reader.readLine() ?: break
-                handleMessage(line, writer, currentStudentId) { id -> currentStudentId = id }
+                try {
+                    val line = reader.readLine() ?: break
+                    handleMessage(line, writer, currentStudentId) { id -> currentStudentId = id }
+                } catch (e: java.io.IOException) {
+                    Log.e(TAG, "Read error: ${e.message}", e)
+                    break
+                }
             }
             
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "Client handler IO error: ${e.message}", e)
         } catch (e: Exception) {
             Log.e(TAG, "Client handler error: ${e.message}", e)
         } finally {
@@ -228,87 +238,172 @@ class TeacherServer(private val context: Context) {
     }
     
     private fun sendAck(writer: PrintWriter, status: String, id: String?) {
-        val response = JSONObject().apply {
-            put("status", status)
-            id?.let { put("id", it) }
+        try {
+            val response = JSONObject().apply {
+                put("status", status)
+                id?.let { put("id", it) }
+            }
+            val jsonString = response.toString()
+            if (isValidJson(jsonString)) {
+                try {
+                    writer.println(jsonString)
+                } catch (e: java.io.IOException) {
+                    Log.e(TAG, "Write error sending ack: ${e.message}", e)
+                }
+            } else {
+                Log.w(TAG, "Invalid JSON generated for ack")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending ack", e)
         }
-        writer.println(response.toString())
+    }
+
+    private fun isValidJson(str: String): Boolean {
+        return try {
+            JSONObject(str)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
     
     private fun sendLessons(writer: PrintWriter, lessons: List<JSONObject>) {
-        val lessonsArray = JSONArray()
-        lessons.forEach { lessonsArray.put(it) }
-        
-        val response = JSONObject().apply {
-            put("action", "LESSONS_DATA")
-            put("lessons", lessonsArray)
+        try {
+            val lessonsArray = JSONArray()
+            lessons.forEach { lesson ->
+                try {
+                    val cleanLesson = sanitizeJsonObject(lesson)
+                    lessonsArray.put(cleanLesson)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing lesson", e)
+                }
+            }
+            
+            val response = JSONObject().apply {
+                put("action", "LESSONS_DATA")
+                put("lessons", lessonsArray)
+            }
+            
+            val jsonString = response.toString()
+            if (isValidJson(jsonString)) {
+                try {
+                    writer.println(jsonString)
+                    Log.d(TAG, "Sent ${lessons.size} lessons as valid JSON")
+                } catch (e: java.io.IOException) {
+                    Log.e(TAG, "Write error sending lessons: ${e.message}", e)
+                }
+            } else {
+                Log.w(TAG, "Invalid JSON generated for lessons")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending lessons", e)
         }
-        writer.println(response.toString())
+    }
+
+    private fun sanitizeJsonObject(obj: JSONObject): JSONObject {
+        val clean = JSONObject()
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            try {
+                val value = obj.get(key)
+                clean.put(key, value)
+            } catch (e: Exception) {
+                Log.w(TAG, "Skipping invalid key: $key")
+            }
+        }
+        return clean
     }
     
     fun broadcastLesson(lesson: JSONObject) {
         scope.launch(Dispatchers.IO) {
-            val teacherIdValue = teacherId.ifEmpty {
-                context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
-            }
-            
-            val lessonWithSubject = JSONObject(lesson.toString())
-            val classId = lesson.optString("classId", "")
-            
-            val subjects = DataManager.getSubjects(context, teacherIdValue)
-            for (subject in subjects) {
-                val subjectId = subject.optString("id")
-                val classes = DataManager.getClasses(context, teacherIdValue, subjectId)
-                if (classes.any { it.optString("id") == classId }) {
-                    lessonWithSubject.put("subjectId", subjectId)
-                    lessonWithSubject.put("subjectTitle", subject.optString("name", ""))
-                    break
+            try {
+                val teacherIdValue = teacherId.ifEmpty {
+                    context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
                 }
-            }
-            
-            val message = JSONObject().apply {
-                put("action", "LESSON_BROADCAST")
-                put("lesson", lessonWithSubject)
-            }
-            
-            val messageStr = message.toString()
-            connectedClients.forEach { writer ->
-                try {
-                    writer.println(messageStr)
-                    Log.d(TAG, "Broadcasted lesson to client: ${lesson.optString("title")}")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error broadcasting lesson", e)
+                
+                val lessonWithSubject = sanitizeJsonObject(lesson)
+                val classId = lessonWithSubject.optString("classId", "")
+                
+                val subjects = DataManager.getSubjects(context, teacherIdValue)
+                for (subject in subjects) {
+                    val subjectId = subject.optString("id")
+                    val classes = DataManager.getClasses(context, teacherIdValue, subjectId)
+                    if (classes.any { it.optString("id") == classId }) {
+                        lessonWithSubject.put("subjectId", subjectId)
+                        lessonWithSubject.put("subjectTitle", subject.optString("name", ""))
+                        break
+                    }
                 }
-            }
-            
-            if (connectedClients.isEmpty()) {
-                Log.d(TAG, "No students connected to broadcast to")
+                
+                val message = JSONObject().apply {
+                    put("action", "LESSON_BROADCAST")
+                    put("lesson", lessonWithSubject)
+                }
+                
+                val messageStr = message.toString()
+                if (!isValidJson(messageStr)) {
+                    Log.w(TAG, "Invalid JSON generated for lesson broadcast")
+                    return@launch
+                }
+                
+                connectedClients.forEach { writer ->
+                    try {
+                        try {
+                            writer.println(messageStr)
+                        } catch (e: java.io.IOException) {
+                            Log.e(TAG, "Write error broadcasting lesson: ${e.message}", e)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error broadcasting lesson", e)
+                    }
+                }
+                
+                Log.d(TAG, "Broadcasted lesson to ${connectedClients.size} clients: ${lesson.optString("title")}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in broadcastLesson", e)
             }
         }
     }
     
     fun broadcastLessonsUpdate(lessons: List<JSONObject>) {
         scope.launch(Dispatchers.IO) {
-            val lessonsArray = JSONArray()
-            lessons.forEach { lessonsArray.put(it) }
-            
-            val message = JSONObject().apply {
-                put("action", "LESSONS_DATA")
-                put("lessons", lessonsArray)
-            }
-            
-            val messageStr = message.toString()
-            connectedClients.forEach { writer ->
-                try {
-                    writer.println(messageStr)
-                    Log.d(TAG, "Broadcasted ${lessons.size} lessons to clients")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error broadcasting lessons", e)
+            try {
+                val lessonsArray = JSONArray()
+                lessons.forEach { lesson ->
+                    try {
+                        lessonsArray.put(sanitizeJsonObject(lesson))
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing lesson for broadcast", e)
+                    }
                 }
-            }
-            
-            if (connectedClients.isEmpty()) {
-                Log.d(TAG, "No students connected to broadcast to")
+                
+                val message = JSONObject().apply {
+                    put("action", "LESSONS_DATA")
+                    put("lessons", lessonsArray)
+                }
+                
+                val messageStr = message.toString()
+                if (!isValidJson(messageStr)) {
+                    Log.w(TAG, "Invalid JSON generated for lessons broadcast")
+                    return@launch
+                }
+                
+                connectedClients.forEach { writer ->
+                    try {
+                        try {
+                            writer.println(messageStr)
+                        } catch (e: java.io.IOException) {
+                            Log.e(TAG, "Write error broadcasting lessons: ${e.message}", e)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error broadcasting lessons", e)
+                    }
+                }
+                
+                Log.d(TAG, "Broadcasted ${lessons.size} lessons to ${connectedClients.size} clients")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in broadcastLessonsUpdate", e)
             }
         }
     }

@@ -12,11 +12,13 @@ import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Lesson
 import com.edu.student.ui.common.LessonAdapter
 import com.edu.student.ui.lesson.LessonActivity
+import kotlinx.coroutines.*
 
 class SubjectActivity : AppCompatActivity() {
     
     private lateinit var binding: StudentActivitySubjectBinding
     private lateinit var repository: StudentRepository
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
     private var subjectId: String = ""
     private var subjectTitle: String = ""
@@ -36,6 +38,11 @@ class SubjectActivity : AppCompatActivity() {
         loadLessons()
     }
     
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
+    
     override fun onResume() {
         super.onResume()
         loadLessons()
@@ -52,40 +59,47 @@ class SubjectActivity : AppCompatActivity() {
     }
     
     private fun loadLessons() {
-        val subjects = repository.getSubjects()
-        val subject = subjects.find { it.id == subjectId }
-        
-        if (subject == null) {
-            binding.emptyView.visibility = View.VISIBLE
-            binding.lessonsRecycler.visibility = View.GONE
-            return
-        }
-        
-        lessons = subject.lessons
-        binding.lessonsCount.text = "${lessons.size} درساً متاحاً"
-        
-        if (lessons.isEmpty()) {
-            binding.emptyView.visibility = View.VISIBLE
-            binding.lessonsRecycler.visibility = View.GONE
-            return
-        }
-        
-        binding.emptyView.visibility = View.GONE
-        binding.lessonsRecycler.visibility = View.VISIBLE
-        
-        binding.lessonsRecycler.layoutManager = LinearLayoutManager(this)
-        binding.lessonsRecycler.adapter = LessonAdapter(lessons, repository) { lesson ->
-            val intent = Intent(this, LessonActivity::class.java).apply {
-                putExtra("subject_id", subjectId)
-                putExtra("subject_title", subjectTitle)
-                putExtra("lesson_id", lesson.id)
-                putExtra("lesson_title", lesson.title)
-                putExtra("lesson_content", lesson.content)
-                putExtra("lesson_unit", lesson.unit)
-                putExtra("video_url", lesson.videoUrl ?: "")
-                putExtra("pdf_url", lesson.pdfUrl ?: "")
+        scope.launch {
+            val subjects = repository.getSubjects()
+            val subject = subjects.find { it.id == subjectId }
+            
+            if (subject == null) {
+                withContext(Dispatchers.Main) {
+                    binding.emptyView.visibility = View.VISIBLE
+                    binding.lessonsRecycler.visibility = View.GONE
+                }
+                return@launch
             }
-            startActivity(intent)
+            
+            lessons = subject.lessons
+            
+            withContext(Dispatchers.Main) {
+                binding.lessonsCount.text = "${lessons.size} درساً متاحاً"
+                
+                if (lessons.isEmpty()) {
+                    binding.emptyView.visibility = View.VISIBLE
+                    binding.lessonsRecycler.visibility = View.GONE
+                    return@withContext
+                }
+                
+                binding.emptyView.visibility = View.GONE
+                binding.lessonsRecycler.visibility = View.VISIBLE
+                
+                binding.lessonsRecycler.layoutManager = LinearLayoutManager(this@SubjectActivity)
+                binding.lessonsRecycler.adapter = LessonAdapter(lessons, repository) { lesson ->
+                    val intent = Intent(this@SubjectActivity, LessonActivity::class.java).apply {
+                        putExtra("subject_id", subjectId)
+                        putExtra("subject_title", subjectTitle)
+                        putExtra("lesson_id", lesson.id)
+                        putExtra("lesson_title", lesson.title)
+                        putExtra("lesson_content", lesson.content)
+                        putExtra("lesson_unit", lesson.unit)
+                        putExtra("video_url", lesson.videoUrl ?: "")
+                        putExtra("pdf_url", lesson.pdfUrl ?: "")
+                    }
+                    startActivity(intent)
+                }
+            }
         }
     }
 }

@@ -9,10 +9,19 @@ import com.edu.student.utils.PermissionHelper
 class StudentApp : Application() {
     
     companion object {
-        lateinit var instance: StudentApp
-            private set
+        private var _instance: StudentApp? = null
         
-        fun applyTheme(mode: String) {
+        val instance: StudentApp
+            get() = _instance ?: throw IllegalStateException(
+                "StudentApp has not been initialized yet. " +
+                "Ensure Application.onCreate() has been called."
+            )
+        
+        fun isInitialized(): Boolean = _instance != null
+        
+        fun getInstanceSafe(): StudentApp? = _instance
+        
+        private fun applyTheme(mode: String) {
             when (mode) {
                 "dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
                 "light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
@@ -21,25 +30,33 @@ class StudentApp : Application() {
         }
         
         fun toggleTheme(enableDark: Boolean) {
-            val prefs = StudentPreferences(instance)
-            val theme = if (enableDark) "dark" else "light"
-            prefs.setTheme(theme)
-            applyTheme(theme)
+            if (!isInitialized()) return
+            try {
+                val prefs = StudentPreferences(instance)
+                val theme = if (enableDark) "dark" else "light"
+                prefs.setTheme(theme)
+                applyTheme(theme)
+            } catch (e: Exception) { }
         }
         
         fun isDarkMode(): Boolean {
             return try {
+                if (!isInitialized()) return false
                 AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
             } catch (e: Exception) {
-                val prefs = StudentPreferences(instance)
-                prefs.getTheme() == "dark"
+                try {
+                    val prefs = StudentPreferences(instance)
+                    prefs.getTheme() == "dark"
+                } catch (e: Exception) {
+                    false
+                }
             }
         }
     }
     
     override fun onCreate() {
         super.onCreate()
-        instance = this
+        _instance = this
         syncTheme()
         createNotificationChannel()
     }

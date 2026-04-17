@@ -98,7 +98,9 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         }
 
         binding.themeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            StudentApp.toggleTheme(isChecked)
+            if (StudentApp.isInitialized()) {
+                StudentApp.toggleTheme(isChecked)
+            }
         }
 
         binding.logoutButton.setOnClickListener {
@@ -153,7 +155,8 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             } catch (e: Exception) { }
         }
 
-        binding.themeSwitch.isChecked = repository.getTheme() == "dark"
+        binding.themeSwitch.isChecked = 
+            if (StudentApp.isInitialized()) StudentApp.isDarkMode() else false
 
         loadJoinedClasses()
     }

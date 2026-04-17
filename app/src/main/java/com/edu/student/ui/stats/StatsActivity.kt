@@ -12,11 +12,13 @@ import com.edu.student.domain.model.Subject
 import com.edu.student.ui.common.SubjectProgressAdapter
 import com.edu.student.ui.dashboard.DashboardActivity
 import com.edu.student.ui.settings.SettingsActivity
+import kotlinx.coroutines.*
 
 class StatsActivity : AppCompatActivity() {
     
     private lateinit var binding: StudentActivityStatsBinding
     private lateinit var repository: StudentRepository
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +29,11 @@ class StatsActivity : AppCompatActivity() {
         
         setupViews()
         loadData()
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
     }
     
     override fun onResume() {
@@ -57,31 +64,34 @@ class StatsActivity : AppCompatActivity() {
     }
     
     private fun loadData() {
-        val student = repository.getStudent()
-        val stats = repository.getStats()
-        
-        binding.studentName.text = student?.name ?: "طالب"
-        
-        binding.starsCount.text = stats.stars.toString()
-        binding.levelCount.text = stats.level.toString()
-        
-        val progressPercent = stats.stars % 100
-        binding.progressBar.progress = progressPercent
-        binding.progressText.text = "التقدم: $progressPercent%"
-        
-        binding.completedCount.text = stats.completedCount.toString()
-        
-        val subjects = repository.getSubjects()
-        
-        if (subjects.isEmpty()) {
-            binding.subjectsList.visibility = View.GONE
-            binding.emptyText.visibility = View.VISIBLE
-        } else {
-            binding.subjectsList.visibility = View.VISIBLE
-            binding.emptyText.visibility = View.GONE
+        scope.launch {
+            val student = repository.getStudent()
+            val stats = repository.getStats()
+            val subjects = repository.getSubjects()
             
-            binding.subjectsList.layoutManager = LinearLayoutManager(this)
-            binding.subjectsList.adapter = SubjectProgressAdapter(subjects, repository)
+            withContext(Dispatchers.Main) {
+                binding.studentName.text = student?.name ?: "طالب"
+                
+                binding.starsCount.text = stats.stars.toString()
+                binding.levelCount.text = stats.level.toString()
+                
+                val progressPercent = stats.stars % 100
+                binding.progressBar.progress = progressPercent
+                binding.progressText.text = "التقدم: $progressPercent%"
+                
+                binding.completedCount.text = stats.completedCount.toString()
+                
+                if (subjects.isEmpty()) {
+                    binding.subjectsList.visibility = View.GONE
+                    binding.emptyText.visibility = View.VISIBLE
+                } else {
+                    binding.subjectsList.visibility = View.VISIBLE
+                    binding.emptyText.visibility = View.GONE
+                    
+                    binding.subjectsList.layoutManager = LinearLayoutManager(this@StatsActivity)
+                    binding.subjectsList.adapter = SubjectProgressAdapter(subjects, repository)
+                }
+            }
         }
     }
     

@@ -19,6 +19,7 @@ import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Question
 import com.edu.student.services.TeacherClient
 import com.edu.student.ui.common.QuestionAdapter
+import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
@@ -30,6 +31,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     private lateinit var binding: StudentActivityLessonBinding
     private lateinit var repository: StudentRepository
     private lateinit var teacherClient: TeacherClient
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     
     private var subjectId = ""
     private var subjectTitle = ""
@@ -70,6 +72,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         tts?.stop()
         tts?.shutdown()
         teacherClient.destroy()
+        scope.cancel()
         super.onDestroy()
     }
     
@@ -180,31 +183,30 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     }
     
     private fun loadAndOpenPdf() {
-        binding.videoProgress.visibility = View.VISIBLE
-        
-        Thread {
+        scope.launch {
+            binding.videoProgress.visibility = View.VISIBLE
+            
             try {
-                val url = URL(pdfUrl)
-                val connection = url.openConnection()
-                connection.connect()
-                val inputStream = connection.getInputStream()
-                val bytes = inputStream.readBytes()
-                inputStream.close()
+                val bytes = withContext(Dispatchers.IO) {
+                    val url = URL(pdfUrl)
+                    val connection = url.openConnection()
+                    connection.connect()
+                    val inputStream = connection.getInputStream()
+                    val data = inputStream.readBytes()
+                    inputStream.close()
+                    data
+                }
                 
                 val pdfFile = File(cacheDir, "lesson_${lessonId}.pdf")
                 pdfFile.writeBytes(bytes)
                 
-                runOnUiThread {
-                    binding.videoProgress.visibility = View.GONE
-                    openPdfFile(pdfFile)
-                }
+                binding.videoProgress.visibility = View.GONE
+                openPdfFile(pdfFile)
             } catch (e: Exception) {
-                runOnUiThread {
-                    binding.videoProgress.visibility = View.GONE
-                    Toast.makeText(this, "فشل في تحميل ملف PDF", Toast.LENGTH_SHORT).show()
-                }
+                binding.videoProgress.visibility = View.GONE
+                Toast.makeText(this@LessonActivity, "فشل في تحميل ملف PDF", Toast.LENGTH_SHORT).show()
             }
-        }.start()
+        }
     }
     
     private fun openPdfFile(file: File) {
@@ -320,33 +322,35 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     }
     
     private fun submitHomework() {
-        if (homeworkSubmitted) {
-            Toast.makeText(this, "تم إرسال الواجب مسبقاً", Toast.LENGTH_SHORT).show()
-            return
+        scope.launch(Dispatchers.Main) {
+            if (homeworkSubmitted) {
+                Toast.makeText(this@LessonActivity, "تم إرسال الواجب مسبقاً", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            
+            binding.submitHomeworkButton.isEnabled = false
+            binding.submitHomeworkButton.text = "جاري الإرسال..."
+            
+            val student = repository.getStudent()
+            
+            teacherClient.submitHomework(mapOf(
+                "studentId" to (student?.id ?: ""),
+                "studentName" to (student?.name ?: ""),
+                "lessonId" to lessonId,
+                "lessonTitle" to lessonTitle,
+                "subjectTitle" to subjectTitle,
+                "homeworkImage" to homeworkImageBase64,
+                "homeworkNote" to "",
+                "isCompleted" to true
+            ))
+            
+            homeworkSubmitted = true
+            repository.addPoints(lessonId, "homework_submit", 20)
+            updatePoints()
+            
+            Toast.makeText(this@LessonActivity, "تم إرسال الواجب للمعلم!", Toast.LENGTH_LONG).show()
+            binding.submitHomeworkButton.text = "تم الإرسال ✓"
         }
-        
-        binding.submitHomeworkButton.isEnabled = false
-        binding.submitHomeworkButton.text = "جاري الإرسال..."
-        
-        val student = repository.getStudent()
-        
-        teacherClient.submitHomework(mapOf(
-            "studentId" to (student?.id ?: ""),
-            "studentName" to (student?.name ?: ""),
-            "lessonId" to lessonId,
-            "lessonTitle" to lessonTitle,
-            "subjectTitle" to subjectTitle,
-            "homeworkImage" to homeworkImageBase64,
-            "homeworkNote" to "",
-            "isCompleted" to true
-        ))
-        
-        homeworkSubmitted = true
-        repository.addPoints(lessonId, "homework_submit", 20)
-        updatePoints()
-        
-        Toast.makeText(this, "تم إرسال الواجب للمعلم!", Toast.LENGTH_LONG).show()
-        binding.submitHomeworkButton.text = "تم الإرسال ✓"
     }
     
     override fun onInit(status: Int) {

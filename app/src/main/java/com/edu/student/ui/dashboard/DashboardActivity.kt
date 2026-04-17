@@ -171,7 +171,7 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     }
     
     override fun onConnected(ip: String) {
-        runOnUiThread {
+        scope.launch(Dispatchers.Main) {
             binding.statusBar.setBackgroundColor(Color.parseColor("#10B981"))
             binding.connectionStatus.text = "متصل بالرادار"
             binding.aiStatus.visibility = View.VISIBLE
@@ -184,7 +184,7 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     }
     
     override fun onDisconnected() {
-        runOnUiThread {
+        scope.launch(Dispatchers.Main) {
             binding.statusBar.setBackgroundColor(Color.parseColor("#F59E0B"))
             binding.connectionStatus.text = "يبحث عن رادار المعلم..."
             isSyncing = false
@@ -194,17 +194,19 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     override fun onLessonsReceived(lessons: List<com.edu.student.domain.model.Lesson>) {
         if (lessons.isNullOrEmpty()) return
         
-        repository.saveLessons(lessons)
-        runOnUiThread {
-            if (!isFinishing && !isDestroyed) {
-                loadData()
-                Toast.makeText(this, "تم تحديث الدروس!", Toast.LENGTH_SHORT).show()
+        scope.launch {
+            repository.saveLessons(lessons)
+            withContext(Dispatchers.Main) {
+                if (!isFinishing && !isDestroyed) {
+                    loadData()
+                    Toast.makeText(this@DashboardActivity, "تم تحديث الدروس!", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
     
     override fun onError(error: String) {
-        runOnUiThread {
+        scope.launch(Dispatchers.Main) {
             isSyncing = false
         }
     }
