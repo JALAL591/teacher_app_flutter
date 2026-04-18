@@ -90,7 +90,7 @@ class BleDiscoveryManager(private val context: Context) {
         val advertiseSettings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
             .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
-            .setConnectable(false)
+            .setConnectable(true)
             .build()
         
         val advertiseData = "${teacherIp}:${port}:${teacherName}"
@@ -237,6 +237,7 @@ class BleDiscoveryManager(private val context: Context) {
     }
     
     fun isCurrentlyAdvertising(): Boolean = isAdvertising
+    fun isAdvertising(): Boolean = advertiser != null
     fun isCurrentlyScanning(): Boolean = isScanning
     
     fun destroy() {

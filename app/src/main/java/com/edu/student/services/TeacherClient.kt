@@ -2,13 +2,11 @@ package com.edu.student.services
 
 import android.content.Context
 import android.util.Log
-import com.edu.common.ConnectionManager
 import com.edu.student.data.preferences.StudentPreferences
 import com.edu.student.domain.model.AnswerSubmission
 import com.edu.student.domain.model.HomeworkSubmission
 import com.edu.student.domain.model.SubmissionSummary
 import com.edu.student.network.TeacherDiscovery
-import com.edu.student.utils.StudentWifiDirectManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
@@ -20,14 +18,12 @@ import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
-import java.util.concurrent.CopyOnWriteArrayList
 
 class TeacherClient(private val context: Context) {
     
     companion object {
         private const val TAG = "TeacherClient"
         const val SERVER_PORT = 9999
-        private const val HOTSPOT_IP = "192.168.43.1"
     }
     
     private val prefs = StudentPreferences(context)
@@ -38,10 +34,7 @@ class TeacherClient(private val context: Context) {
     private var writer: PrintWriter? = null
     @Volatile
     private var isRunning = false
-    private var currentServerIP: String = HOTSPOT_IP
-    
-    private var wifiDirectManager: StudentWifiDirectManager? = null
-    private var connectionManager: ConnectionManager? = null
+    private var currentServerIP: String = ""
     
     @Volatile
     var isConnected: Boolean = false
@@ -56,7 +49,6 @@ class TeacherClient(private val context: Context) {
     
     private val discovery = TeacherDiscovery(context)
     
-    // استخدام CopyOnWriteArrayList لمنع ConcurrentModificationException
     private val listeners = mutableMapOf<String, MutableList<(Any?) -> Unit>>()
     private var retryJob: Job? = null
     @Volatile
@@ -90,106 +82,7 @@ class TeacherClient(private val context: Context) {
     fun init() {
         isManualDisconnect = false
         isRunning = true
-        
-        connectionManager = ConnectionManager(context)
-        
         discoverAndConnect()
-    }
-
-private fun discoverTeacherWithConnectionManager() {
-        scope.launch(Dispatchers.IO) {
-            try {
-                val teacherIp = connectionManager?.discoverTeacher(object : ConnectionManager.ConnectionCallback {
-                    override fun onModeDetected(mode: ConnectionManager.ConnectionMode) {
-                        Log.d(TAG, "Trying connection mode: $mode")
-                        runOnUiThread {
-                            when (mode) {
-                                ConnectionManager.ConnectionMode.BLE_DISCOVERY -> 
-                                    safeEmitCallback { callback?.onError("جاري البحث عبر البلوتوث...") }
-                                ConnectionManager.ConnectionMode.WIFI_DIRECT -> 
-                                    safeEmitCallback { callback?.onError("جاري البحث عبر WiFi Direct...") }
-                                ConnectionManager.ConnectionMode.SAME_WIFI -> 
-                                    safeEmitCallback { callback?.onError("جاري البحث على الشبكة المحلية...") }
-                                ConnectionManager.ConnectionMode.HOTSPOT -> 
-                                    safeEmitCallback { callback?.onError("جاري البحث عبر نقطة اتصال...") }
-                            }
-                        }
-                    }
-                    
-                    override fun onTeacherFound(ip: String, mode: ConnectionManager.ConnectionMode) {
-                        Log.d(TAG, "Teacher found via $mode at $ip")
-                    }
-                    
-                    override fun onConnectionFailed() {
-                        Log.e(TAG, "All connection modes failed")
-                    }
-                })
-                
-                if (teacherIp != null) {
-                    currentServerIP = teacherIp
-                    runOnUiThread {
-                        safeEmitCallback { callback?.onError("تم العثور على المعلم! جاري اتصال...") }
-                    }
-                    connectToServer(teacherIp)
-                } else {
-                    runOnUiThread {
-                        safeEmitCallback { callback?.onError("لم يتم العثور على المعلم. تأكد من:\n" +
-                            "١. تفعيل WiFi على الجهازين\n" +
-                            "٢. أن المعلم قريب منك\n" +
-                            "٣. تطبيق المعلم مفتوح وفي وضع 'بدء الدرس'") }
-                    }
-                    scheduleRetry()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Discovery failed: ${e.message}", e)
-                scheduleRetry()
-            }
-        }
-    }
-    
-    private fun initWifiDirect() {
-        wifiDirectManager = StudentWifiDirectManager(context)
-        wifiDirectManager?.initialize()
-        wifiDirectManager?.register()
-        
-        wifiDirectManager?.onWifiP2pEnabled = { enabled ->
-            if (isRunning) {
-                Log.d(TAG, "WiFi Direct enabled: $enabled")
-            }
-        }
-        
-        wifiDirectManager?.onPeersAvailable = { peers ->
-            if (isRunning) {
-                Log.d(TAG, "Found ${peers.size} teachers nearby")
-                if (!isConnected && peers.isNotEmpty()) {
-                    Log.d(TAG, "Auto-connecting to first teacher: ${peers.first().deviceName}")
-                    wifiDirectManager?.connectToTeacher(peers.first())
-                }
-            }
-        }
-        
-        wifiDirectManager?.onConnectedToTeacher = { groupOwnerAddress ->
-            if (isRunning && !isConnected) {
-                val teacherIp = groupOwnerAddress.hostAddress
-                Log.d(TAG, "Connected via WiFi Direct to: $teacherIp")
-                currentServerIP = teacherIp ?: HOTSPOT_IP
-                connectToServer(currentServerIP)
-            }
-        }
-        
-        wifiDirectManager?.onDisconnected = {
-            if (isRunning) {
-                Log.d(TAG, "Disconnected from WiFi Direct")
-            }
-        }
-    }
-    
-    private fun connect() {
-        if (!isRunning || isConnecting || isConnected) return
-        val targetIP = currentServerIP.ifEmpty { HOTSPOT_IP }
-        scope.launch(Dispatchers.IO) {
-            connectToServer(targetIP)
-        }
     }
 
     fun discoverAndConnect() {
@@ -208,6 +101,7 @@ private fun discoverTeacherWithConnectionManager() {
                     
                     val cleanIp = ip.split(":").first()
                     currentServerIP = cleanIp
+                    prefs.setTeacherIP(cleanIp)
                     
                     scope.launch(Dispatchers.Main) {
                         safeEmitCallback { callback?.onError("✅ تم العثور على المعلم! جاري الاتصال...") }
@@ -224,13 +118,46 @@ private fun discoverTeacherWithConnectionManager() {
         }
     }
 
+    private fun getCurrentNetworkPrefix(): String? {
+        return try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val intf = interfaces.nextElement()
+                if (!intf.isUp || intf.isLoopback) continue
+                val addresses = intf.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val addr = addresses.nextElement()
+                    if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
+                        val ip = addr.hostAddress ?: continue
+                        if (ip.startsWith("192.168.")) {
+                            val parts = ip.split(".")
+                            return "${parts[0]}.${parts[1]}.${parts[2]}"
+                        }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun tryFallbackIPs() {
-        val fallbackIPs = listOf(
-            "192.168.0.101",
-            "192.168.49.1",
-            "192.168.1.1",
-            "192.168.43.1"
-        )
+        val currentNetworkPrefix = getCurrentNetworkPrefix()
+        
+        val fallbackIPs = buildList {
+            if (currentNetworkPrefix != null) {
+                add("${currentNetworkPrefix}.1")
+                add("${currentNetworkPrefix}.100")
+                add("${currentNetworkPrefix}.101")
+                add("${currentNetworkPrefix}.102")
+            }
+            add("192.168.0.101")
+            add("192.168.0.1")
+            add("192.168.1.1")
+            add("192.168.43.1")
+            add("192.168.49.1")
+        }.distinct()
         
         scope.launch(Dispatchers.Main) {
             safeEmitCallback { callback?.onError("🔄 جاري تجربة اتصال بديل...") }
@@ -240,11 +167,13 @@ private fun discoverTeacherWithConnectionManager() {
     }
     
     private fun tryNextFallbackIP(ips: List<String>, index: Int) {
-        if (index >= ips.size) {
-            scope.launch(Dispatchers.Main) {
-                safeEmitCallback { callback?.onError("❌ لم يتم العثور على المعلم") }
+        if (index >= ips.size || !isRunning || isConnected) {
+            if (!isConnected) {
+                scope.launch(Dispatchers.Main) {
+                    safeEmitCallback { callback?.onError("❌ لم يتم العثور على المعلم") }
+                }
+                scheduleRetry()
             }
-            scheduleRetry()
             return
         }
         
@@ -252,10 +181,16 @@ private fun discoverTeacherWithConnectionManager() {
         Log.d(TAG, "Trying fallback IP: $ip")
         
         scope.launch(Dispatchers.IO) {
-            connectToServer(ip)
-            
-            delay(2000)
-            if (!isConnected) {
+            try {
+                val testSocket = Socket()
+                testSocket.connect(InetSocketAddress(ip, SERVER_PORT), 2000)
+                testSocket.close()
+                
+                currentServerIP = ip
+                prefs.setTeacherIP(ip)
+                connectToServer(ip)
+            } catch (e: Exception) {
+                Log.w(TAG, "Fallback $ip failed: ${e.message}")
                 tryNextFallbackIP(ips, index + 1)
             }
         }
@@ -263,14 +198,14 @@ private fun discoverTeacherWithConnectionManager() {
     
     private fun connectToServer(serverAddress: String) {
         if (!isRunning) return
+        if (isConnecting || isConnected) return
+        
         try {
             val address = InetAddress.getByName(serverAddress)
             connectToServer(address)
         } catch (e: Exception) {
-            Log.e(TAG, "Invalid address: $serverAddress")
-            if (serverAddress != HOTSPOT_IP) {
-                connectToServer(HOTSPOT_IP)
-            }
+            Log.e(TAG, "Invalid address: $serverAddress", e)
+            scheduleRetry()
         }
     }
     
@@ -281,7 +216,7 @@ private fun discoverTeacherWithConnectionManager() {
         scope.launch(Dispatchers.IO) {
             try {
                 isConnecting = true
-                val ip = serverAddress.hostAddress ?: HOTSPOT_IP
+                val ip = serverAddress.hostAddress ?: return@launch
                 Log.d(TAG, "Attempting to connect to teacher at $ip:$SERVER_PORT")
                 
                 closeConnectionSafely()
@@ -292,7 +227,7 @@ private fun discoverTeacherWithConnectionManager() {
                     tcpNoDelay = true
                     receiveBufferSize = 128 * 1024
                     sendBufferSize = 128 * 1024
-                    connect(InetSocketAddress(serverAddress, SERVER_PORT), 15000)
+                    connect(InetSocketAddress(serverAddress, SERVER_PORT), 3000)
                 }
                 
                 reader = BufferedReader(InputStreamReader(socket!!.getInputStream(), "UTF-8"), 8192)
@@ -302,9 +237,10 @@ private fun discoverTeacherWithConnectionManager() {
                 isConnecting = false
                 currentServerIP = ip
                 retryCount = 0
+                prefs.setTeacherIP(ip)
+                
                 Log.d(TAG, "SUCCESS: Connected to teacher at $ip:$SERVER_PORT")
                 
-                // تسجيل الطالب
                 val student = prefs.getStudent()
                 val grade = currentGrade ?: student?.grade ?: ""
                 val section = currentSection ?: student?.section ?: ""
@@ -328,9 +264,10 @@ private fun discoverTeacherWithConnectionManager() {
                 startListening()
                 
             } catch (e: Exception) {
+                isConnecting = false
                 if (isRunning) {
                     Log.e(TAG, "Connection failed: ${e.message}", e)
-                    handleConnectionFailed()
+                    scheduleRetry()
                 }
             }
         }
@@ -347,27 +284,44 @@ private fun discoverTeacherWithConnectionManager() {
         connectionMonitorJob?.cancel()
         connectionMonitorJob = scope.launch(Dispatchers.IO) {
             while (isRunning && isConnected) {
-                delay(10000)
-                if (isRunning && isConnected) {
-                    sendPing()
+                delay(15000)
+                try {
+                    if (socket?.isConnected == true && !socket!!.isClosed) {
+                        val ping = JSONObject().apply {
+                            put("type", "PING")
+                            put("timestamp", System.currentTimeMillis())
+                        }
+                        writer?.println(ping.toString())
+                        if (writer?.checkError() == true) {
+                            Log.w(TAG, "Keepalive failed - connection lost")
+                            handleDisconnect()
+                            break
+                        }
+                        lastPingTime = System.currentTimeMillis()
+                    } else {
+                        handleDisconnect()
+                        break
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Keepalive error: ${e.message}")
+                    handleDisconnect()
+                    break
                 }
             }
         }
     }
     
-    private fun sendPing() {
-        if (!isConnected || !isRunning || writer == null) return
-        
-        try {
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastPingTime > 5000) {
-                writer?.println("""{"type":"PING","timestamp":"$currentTime"}""")
-                lastPingTime = currentTime
-                Log.d(TAG, "Ping sent")
+    private fun handleDisconnect() {
+        if (!isManualDisconnect && isRunning) {
+            isConnected = false
+            closeConnectionSafely()
+            runOnUiThread {
+                safeEmitCallback { callback?.onDisconnected() }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send ping: ${e.message}")
-            handleConnectionLost()
+            if (retryCount < maxRetries) {
+                retryCount++
+                scheduleRetry()
+            }
         }
     }
     
@@ -377,81 +331,19 @@ private fun discoverTeacherWithConnectionManager() {
                 try {
                     val line = reader?.readLine()
                     if (line == null) {
-                        if (isRunning) {
-                            Log.w(TAG, "End of stream reached")
-                        }
+                        if (isRunning) Log.w(TAG, "End of stream reached")
                         break
                     }
                     if (line.isNotEmpty() && isRunning) {
                         handleIncoming(line)
                     }
                 } catch (e: java.io.IOException) {
-                    if (isRunning) {
-                        Log.e(TAG, "Read error: ${e.message}")
-                        break
-                    }
-                } catch (e: Exception) {
-                    if (isRunning) {
-                        Log.e(TAG, "Read error: ${e.message}")
-                        break
-                    }
+                    if (isRunning) Log.e(TAG, "Read error: ${e.message}")
+                    break
                 }
             }
         } finally {
-            if (isRunning && !isManualDisconnect) {
-                Log.d(TAG, "Connection lost, attempting immediate reconnect")
-                handleConnectionLost()
-                if (isRunning && !isConnected) {
-                    delay(1000)
-                    if (isRunning && retryCount < maxRetries) {
-                        retryCount++
-                        Log.d(TAG, "Reconnect attempt $retryCount/$maxRetries")
-                        connectToServer(currentServerIP)
-                    }
-                }
-            }
-        }
-    }
-    
-    private fun handleConnectionLost() {
-        if (!isRunning) return
-        
-        isConnected = false
-        safeEmitCallback { callback?.onDisconnected() }
-        safeEmit("disconnected", null)
-        
-        if (isRunning) {
-            wifiDirectManager?.discoverTeachers()
-            scheduleRetry()
-        }
-    }
-    
-    private fun handleConnectionFailed() {
-        if (!isRunning) return
-        
-        isConnected = false
-        closeConnectionSafely()
-        
-        val lastIP = currentServerIP
-        
-        if (isRunning) {
-            Log.w(TAG, "Connection to $lastIP failed. Retrying...")
-            wifiDirectManager?.discoverTeachers()
-            
-            val fallbackIP = if (lastIP != HOTSPOT_IP && lastIP.isNotEmpty()) HOTSPOT_IP else null
-            if (fallbackIP != null) {
-                scope.launch {
-                    delay(2000)
-                    if (!isConnected && isRunning) {
-                        Log.d(TAG, "Fallback: trying default IP $HOTSPOT_IP")
-                        connectToServer(HOTSPOT_IP)
-                    }
-                }
-            }
-            
-            safeEmitCallback { callback?.onError("جاري محاولة الاتصال...") }
-            safeEmit("disconnected", null)
-            scheduleRetry()
+            handleDisconnect()
         }
     }
     
@@ -462,14 +354,8 @@ private fun discoverTeacherWithConnectionManager() {
             val trimmedData = data.trim()
             if (trimmedData.isEmpty()) return
             
-            val json: JSONObject = try {
-                JSONObject(trimmedData)
-            } catch (e: Exception) {
-                Log.e(TAG, "Invalid JSON format: $trimmedData")
-                return
-            }
+            val json = JSONObject(trimmedData)
             
-            // معالجة الدرس المباشر
             if (json.has("id") && json.has("title") && json.has("questions")) {
                 processDirectLesson(json)
                 return
@@ -487,36 +373,17 @@ private fun discoverTeacherWithConnectionManager() {
                 }
                 
                 action == "LESSON_BROADCAST" -> {
-                    android.util.Log.d("TeacherClient", "=== RECEIVED LESSON_BROADCAST ===")
                     val lessonJson = json.optJSONObject("lesson")
                     if (lessonJson != null) {
-                        android.util.Log.d("TeacherClient", "Processing lesson: ${lessonJson.optString("title", "unknown")}")
                         processDirectLesson(lessonJson)
-                    } else {
-                        val lessonStr = json.optString("lesson", "")
-                        if (lessonStr.isNotEmpty()) {
-                            try {
-                                val parsedLessonJson = JSONObject(lessonStr)
-                                android.util.Log.d("TeacherClient", "Lesson from string: ${parsedLessonJson.optString("title", "unknown")}")
-                                if (isLessonForThisStudent(parsedLessonJson)) {
-                                    val lesson = gson.fromJson(lessonStr, com.edu.student.domain.model.Lesson::class.java)
-                                    android.util.Log.d("TeacherClient", "Processing lesson for this student")
-                                    processLesson(lesson)
-                                } else {
-                                    Log.d(TAG, "Broadcasted lesson not for this student, skipping")
-                                }
-                            } catch (e: Exception) {
-                                Log.e(TAG, "Error parsing lesson from string", e)
-                            }
-                        }
                     }
-                    android.util.Log.d("TeacherClient", "=== LESSON_BROADCAST PROCESSED ===")
                 }
                 
                 status == "REGISTERED" -> {
                     val teacherIPFromServer = json.optString("teacherIP", "")
-                    if (teacherIPFromServer.isNotEmpty() && teacherIPFromServer != HOTSPOT_IP) {
+                    if (teacherIPFromServer.isNotEmpty()) {
                         currentServerIP = teacherIPFromServer
+                        prefs.setTeacherIP(teacherIPFromServer)
                         Log.d(TAG, "Updated server IP from teacher: $currentServerIP")
                     }
                     Log.d(TAG, "Registered with teacher")
@@ -528,9 +395,7 @@ private fun discoverTeacherWithConnectionManager() {
                 }
             }
         } catch (e: Exception) {
-            if (isRunning) {
-                Log.e(TAG, "Error parsing message: ${e.message}")
-            }
+            if (isRunning) Log.e(TAG, "Error parsing message: ${e.message}")
         }
     }
     
@@ -559,8 +424,6 @@ private fun discoverTeacherWithConnectionManager() {
                     if (isLessonForThisStudent(lessonJson)) {
                         val lesson = gson.fromJson(lessonJson.toString(), com.edu.student.domain.model.Lesson::class.java)
                         lessons.add(lesson)
-                    } else {
-                        Log.d(TAG, "Skipping lesson ${lessonJson.optString("title", "")} - not for this student")
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error parsing lesson at index $i")
@@ -580,39 +443,19 @@ private fun discoverTeacherWithConnectionManager() {
     private fun isLessonForThisStudent(lessonJson: JSONObject): Boolean {
         val lessonGrade = lessonJson.optString("grade", "")
         val lessonSection = lessonJson.optString("section", "")
-        
-        val studentGrade = getStudentGrade()
-        val studentSection = getStudentSection()
-        
-        Log.d(TAG, "Filtering: lesson=$lessonGrade-$lessonSection, student=$studentGrade-$studentSection")
+        val studentGrade = currentGrade ?: prefs.getStudent()?.grade ?: ""
+        val studentSection = currentSection ?: prefs.getStudent()?.section ?: ""
         
         return when {
-            lessonGrade.isNotEmpty() && lessonSection.isNotEmpty() -> {
+            lessonGrade.isNotEmpty() && lessonSection.isNotEmpty() -> 
                 lessonGrade == studentGrade && lessonSection == studentSection
-            }
-            lessonGrade.isNotEmpty() -> {
-                lessonGrade == studentGrade
-            }
+            lessonGrade.isNotEmpty() -> lessonGrade == studentGrade
             else -> true
         }
     }
     
-    private fun getStudentGrade(): String {
-        return currentGrade ?: prefs.getStudent()?.grade ?: ""
-    }
-    
-    private fun getStudentSection(): String {
-        return currentSection ?: prefs.getStudent()?.section ?: ""
-    }
-    
     private suspend fun processLesson(lesson: com.edu.student.domain.model.Lesson) {
         try {
-            val lessonJson = JSONObject(gson.toJson(lesson))
-            if (!isLessonForThisStudent(lessonJson)) {
-                Log.d(TAG, "Lesson ${lesson.title} not for this student, skipping")
-                return
-            }
-            
             Log.d(TAG, "Processing lesson: ${lesson.title}")
             
             val teacherId = prefs.getAssignedTeacherId() ?: ""
@@ -621,12 +464,8 @@ private fun discoverTeacherWithConnectionManager() {
                 try {
                     val type = object : TypeToken<MutableList<com.edu.student.domain.model.Lesson>>() {}.type
                     gson.fromJson<MutableList<com.edu.student.domain.model.Lesson>>(cached, type)
-                } catch (e: Exception) { 
-                    mutableListOf() 
-                }
-            } else { 
-                mutableListOf() 
-            }
+                } catch (e: Exception) { mutableListOf() }
+            } else { mutableListOf() }
             
             if (lessons.none { it.id == lesson.id }) {
                 lessons.add(0, lesson)
@@ -643,21 +482,8 @@ private fun discoverTeacherWithConnectionManager() {
     }
     
     private fun sendData(payload: Map<String, Any?>) {
-        Log.d(TAG, "--- SEND DATA START ---")
-        Log.d(TAG, "Payload type: ${payload["type"]}")
-        Log.d(TAG, "isConnected: $isConnected")
-        Log.d(TAG, "isRunning: $isRunning")
-        
-        if (!isConnected || !isRunning) {
-            Log.e(TAG, "❌ Cannot send: isConnected=$isConnected, isRunning=$isRunning")
-            runOnUiThread {
-                android.widget.Toast.makeText(context, "❌ غير متصل بالمعلم", android.widget.Toast.LENGTH_SHORT).show()
-            }
-            return
-        }
-        
-        if (writer == null) {
-            Log.e(TAG, "❌ Writer is null! Cannot send data")
+        if (!isConnected || !isRunning || writer == null) {
+            Log.e(TAG, "Cannot send: isConnected=$isConnected, isRunning=$isRunning, writer=${writer != null}")
             return
         }
         
@@ -667,48 +493,19 @@ private fun discoverTeacherWithConnectionManager() {
                 data["timestamp"] = System.currentTimeMillis().toString()
                 val json = JSONObject(data).toString()
                 
-                Log.d(TAG, "JSON to send (first 300 chars): ${json.take(300)}")
-                Log.d(TAG, "JSON length: ${json.length} bytes")
-                
                 writer?.println(json)
                 
-                val hasError = writer?.checkError() ?: true
-                if (hasError) {
-                    Log.e(TAG, "❌❌❌ WRITE ERROR - checkError() returned true ❌❌❌")
-                    runOnUiThread {
-                        android.widget.Toast.makeText(context, "❌ فشل إرسال الواجب", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                    if (isRunning) {
-                        handleConnectionLost()
-                    }
+                if (writer?.checkError() == true) {
+                    Log.e(TAG, "Write error - checkError returned true")
+                    if (isRunning) handleDisconnect()
                 } else {
-                    Log.d(TAG, "✅✅✅ DATA SENT SUCCESSFULLY ✅✅✅")
-                    runOnUiThread {
-                        android.widget.Toast.makeText(context, "✅ تم إرسال الواجب", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                }
-                
-                Log.d(TAG, "--- SEND DATA END ---")
-                
-            } catch (e: java.io.IOException) {
-                Log.e(TAG, "❌ IOException: ${e.message}", e)
-                runOnUiThread {
-                    android.widget.Toast.makeText(context, "❌ خطأ في الاتصال", android.widget.Toast.LENGTH_SHORT).show()
-                }
-                if (isRunning) {
-                    handleConnectionLost()
+                    Log.d(TAG, "Data sent successfully: ${payload["type"]}")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Unexpected error: ${e.message}", e)
-                runOnUiThread {
-                    android.widget.Toast.makeText(context, "❌ خطأ غير متوقع", android.widget.Toast.LENGTH_SHORT).show()
-                }
+                Log.e(TAG, "Send failed: ${e.message}", e)
+                if (isRunning) handleDisconnect()
             }
         }
-    }
-    
-    fun sendCustomData(payload: Map<String, Any?>) {
-        sendData(payload)
     }
     
     fun registerStudent(studentId: String, studentName: String, grade: String, section: String) {
@@ -730,44 +527,48 @@ private fun discoverTeacherWithConnectionManager() {
         ))
     }
     
+    fun sendCustomData(payload: Map<String, Any?>) {
+        sendData(payload)
+    }
+    
     fun submitHomework(data: Map<String, Any?>) {
-        Log.d(TAG, "========================================")
-        Log.d(TAG, "=== SUBMIT HOMEWORK CALLED ===")
-        Log.d(TAG, "========================================")
-        Log.d(TAG, "isConnected: $isConnected")
-        Log.d(TAG, "isRunning: $isRunning")
-        Log.d(TAG, "writer is null: ${writer == null}")
-        Log.d(TAG, "socket is null: ${socket == null}")
-        Log.d(TAG, "socket is connected: ${socket?.isConnected}")
-        Log.d(TAG, "socket is closed: ${socket?.isClosed}")
-        Log.d(TAG, "Data keys: ${data.keys}")
-        Log.d(TAG, "========================================")
-        
-        if (!isConnected) {
-            Log.e(TAG, "❌❌❌ NOT CONNECTED TO TEACHER ❌❌❌")
+        if (!isConnected || writer == null) {
+            Log.e(TAG, "Cannot submit homework - not connected")
             runOnUiThread {
-                android.widget.Toast.makeText(context, "❌ غير متصل بالمعلم", android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(context, "❌ غير متصل بالمعلم", android.widget.Toast.LENGTH_SHORT).show()
             }
             return
         }
         
-        if (!isRunning) {
-            Log.e(TAG, "❌❌❌ CLIENT NOT RUNNING ❌❌❌")
-            return
+        scope.launch(Dispatchers.IO) {
+            try {
+                val message = JSONObject().apply {
+                    put("type", "HOMEWORK_SUBMISSION")
+                    data.forEach { (key, value) -> put(key, value) }
+                }
+                
+                val messageStr = message.toString()
+                writer?.println(messageStr)
+                
+                if (writer?.checkError() == true) {
+                    Log.e(TAG, "Failed to send homework - writer error")
+                    runOnUiThread {
+                        android.widget.Toast.makeText(context, "❌ فشل إرسال الواجب", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    handleDisconnect()
+                } else {
+                    Log.d(TAG, "Homework submitted successfully")
+                    runOnUiThread {
+                        android.widget.Toast.makeText(context, "✅ تم إرسال الواجب", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error submitting homework: ${e.message}", e)
+                runOnUiThread {
+                    android.widget.Toast.makeText(context, "❌ خطأ في الإرسال", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
-        
-        if (writer == null) {
-            Log.e(TAG, "❌❌❌ WRITER IS NULL ❌❌❌")
-            return
-        }
-        
-        sendData(mapOf(
-            "type" to "HOMEWORK_SUBMISSION"
-        ) + data)
-    }
-    
-    fun ping() {
-        sendData(mapOf("type" to "PING"))
     }
     
     fun submitSavedHomework(lessonId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
@@ -865,11 +666,7 @@ private fun discoverTeacherWithConnectionManager() {
                     listeners[event]?.toList() ?: emptyList()
                 }
                 eventListeners.forEach { 
-                    try {
-                        it.invoke(data) 
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in listener for event $event: ${e.message}")
-                    }
+                    try { it.invoke(data) } catch (e: Exception) {} 
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error emitting event $event: ${e.message}")
@@ -882,24 +679,14 @@ private fun discoverTeacherWithConnectionManager() {
         
         try {
             runOnUiThread {
-                try {
-                    action()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error in callback: ${e.message}")
-                }
+                try { action() } catch (e: Exception) {}
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in safeEmitCallback: ${e.message}")
-        }
+        } catch (e: Exception) {}
     }
     
     private fun scheduleRetry() {
         if (isManualDisconnect || !isRunning || isConnecting) return
-        
-        if (retryCount >= maxRetries) {
-            Log.w(TAG, "Max retries reached, stopping retry attempts")
-            return
-        }
+        if (retryCount >= maxRetries) return
         
         retryJob?.cancel()
         retryJob = scope.launch {
@@ -907,41 +694,25 @@ private fun discoverTeacherWithConnectionManager() {
             if (!isManualDisconnect && isRunning && !isConnected && !isConnecting) {
                 Log.d(TAG, "Retrying connection...")
                 hasAutoRequested = false
-                connect()
+                val savedIP = prefs.getTeacherIP()
+                if (savedIP != null) {
+                    currentServerIP = savedIP
+                    connectToServer(savedIP)
+                } else {
+                    discoverAndConnect()
+                }
             }
         }
     }
     
     private fun runOnUiThread(action: () -> Unit) {
-        try {
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                try {
-                    action()
-                } catch (e: Exception) {
-                    Log.e(TAG, "UI thread action failed: ${e.message}")
-                }
-            }
-        } catch (e: Exception) {
-            // إذا فشل النشر على UI thread، ننفذ مباشرة
-            try {
-                action()
-            } catch (e2: Exception) {
-                // تجاهل
-            }
-        }
+        android.os.Handler(android.os.Looper.getMainLooper()).post(action)
     }
     
     private fun closeConnectionSafely() {
-        try {
-            reader?.close()
-        } catch (e: Exception) { }
-        try {
-            writer?.close()
-        } catch (e: Exception) { }
-        try {
-            socket?.close()
-        } catch (e: Exception) { }
-        
+        try { reader?.close() } catch (e: Exception) {}
+        try { writer?.close() } catch (e: Exception) {}
+        try { socket?.close() } catch (e: Exception) {}
         reader = null
         writer = null
         socket = null
@@ -951,59 +722,25 @@ private fun discoverTeacherWithConnectionManager() {
     
     fun destroy() {
         Log.d(TAG, "Destroying TeacherClient")
-        
         isManualDisconnect = true
         isRunning = false
-        
-        // إلغاء جميع المهام
         retryJob?.cancel()
-        retryJob = null
-        
         connectionMonitorJob?.cancel()
-        connectionMonitorJob = null
-        
         listenJob?.cancel()
-        listenJob = null
-        
-        // إلغاء WiFi Direct
-        try {
-            wifiDirectManager?.unregister()
-        } catch (e: Exception) { }
-        wifiDirectManager = null
-        
-        try {
-            connectionManager?.cleanup()
-        } catch (e: Exception) { }
-        connectionManager = null
-        
-        // إغلاق الاتصال
         closeConnectionSafely()
-        
-        // تنظيف المستمعين
-        synchronized(listeners) {
-            listeners.clear()
-        }
-        
+        synchronized(listeners) { listeners.clear() }
         callback = null
-        
-        Log.d(TAG, "TeacherClient destroyed")
     }
     
     fun manualReconnect() {
         hasAutoRequested = false
         isManualDisconnect = false
+        retryCount = 0
         destroy()
-        
         scope.launch {
             delay(1000)
             isRunning = true
             init()
-        }
-    }
-    
-    fun startWifiDirectSearch() {
-        if (isRunning) {
-            wifiDirectManager?.discoverTeachers()
         }
     }
 }

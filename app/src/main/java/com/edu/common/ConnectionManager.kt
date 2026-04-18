@@ -1,10 +1,6 @@
 package com.edu.common
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.wifi.WifiManager
-import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.*
 import java.net.InetSocketAddress
@@ -38,6 +34,7 @@ class ConnectionManager(private val context: Context) {
     private val bleDiscoveryDone = AtomicBoolean(false)
 
     suspend fun discoverTeacher(callback: ConnectionCallback): String? = withContext(Dispatchers.IO) {
+        // ١. محاولة BLE أولاً
         if (bleDiscoveryManager.hasBluetoothPermissions() && bleDiscoveryManager.isBluetoothEnabled()) {
             callback.onModeDetected(ConnectionMode.BLE_DISCOVERY)
             val bleIp = discoverViaBle()
@@ -49,6 +46,7 @@ class ConnectionManager(private val context: Context) {
             Log.d(TAG, "BLE not available, skipping to WiFi methods")
         }
 
+        // ٢. محاولة WiFi Direct
         callback.onModeDetected(ConnectionMode.WIFI_DIRECT)
         val wifiDirectIp = discoverViaWifiDirect()
         if (wifiDirectIp != null) {
@@ -56,6 +54,7 @@ class ConnectionManager(private val context: Context) {
             return@withContext wifiDirectIp
         }
 
+        // ٣. محاولة Same WiFi
         callback.onModeDetected(ConnectionMode.SAME_WIFI)
         val sameWifiIp = discoverViaSameWifi()
         if (sameWifiIp != null) {
@@ -63,6 +62,7 @@ class ConnectionManager(private val context: Context) {
             return@withContext sameWifiIp
         }
 
+        // ٤. محاولة Hotspot
         callback.onModeDetected(ConnectionMode.HOTSPOT)
         val hotspotIp = discoverViaHotspot()
         if (hotspotIp != null) {
@@ -70,6 +70,7 @@ class ConnectionManager(private val context: Context) {
             return@withContext hotspotIp
         }
 
+        callback.onConnectionFailed()
         return@withContext null
     }
     
@@ -103,15 +104,23 @@ class ConnectionManager(private val context: Context) {
         try {
             bleDiscoveryManager.startScanningWithCallback(foundCallback)
             
-            withTimeoutOrNull(15000) {
+            val discoveredIp: String? = withTimeoutOrNull(15000) {
                 while (resultIp == null && !bleDiscoveryDone.get()) {
                     delay(500)
                 }
                 resultIp
             }
+            
+            if (discoveredIp != null) {
+                Log.d(TAG, "BLE discovery successful: $discoveredIp")
+                return@withContext discoveredIp
+            } else {
+                Log.w(TAG, "BLE discovery timeout or failed")
+                return@withContext null
+            }
         } catch (e: Exception) {
             Log.e(TAG, "BLE discovery error: ${e.message}")
-            null
+            return@withContext null
         } finally {
             bleDiscoveryManager.stopScanning()
         }
@@ -129,25 +138,39 @@ class ConnectionManager(private val context: Context) {
         }
 
         var resultIp: String? = null
-
-        val connectionJob = launch {
-            delay(10000)
-        }
+        var connectionJob: Job? = null
 
         wifiDirectManager.onConnected = { ip ->
+            Log.d(TAG, "WiFi Direct connected to: $ip")
             resultIp = ip
-            connectionJob.cancel()
+            connectionJob?.cancel()
         }
 
         wifiDirectManager.register()
+        
+        connectionJob = launch {
+            delay(15000)
+            if (resultIp == null) {
+                Log.w(TAG, "WiFi Direct connection timeout")
+            }
+        }
+
         wifiDirectManager.startDiscovery()
 
         try {
-            withTimeoutOrNull(10000) {
+            val discoveredIp: String? = withTimeoutOrNull(15000) {
                 while (resultIp == null) {
                     delay(500)
                 }
                 resultIp
+            }
+            
+            if (discoveredIp != null) {
+                Log.d(TAG, "WiFi Direct discovery successful: $discoveredIp")
+                return@withContext discoveredIp
+            } else {
+                Log.w(TAG, "WiFi Direct discovery timeout")
+                return@withContext null
             }
         } finally {
             wifiDirectManager.stopDiscovery()
@@ -231,13 +254,15 @@ class ConnectionManager(private val context: Context) {
             val interfaces = NetworkInterface.getNetworkInterfaces()
             while (interfaces.hasMoreElements()) {
                 val networkInterface = interfaces.nextElement()
-                val addresses = networkInterface.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val address = addresses.nextElement()
-                    if (!address.isLoopbackAddress && address is java.net.Inet4Address) {
-                        val ip = address.hostAddress
-                        if (ip != null) {
-                            return ip
+                if (networkInterface.isUp && !networkInterface.isLoopback) {
+                    val addresses = networkInterface.inetAddresses
+                    while (addresses.hasMoreElements()) {
+                        val address = addresses.nextElement()
+                        if (!address.isLoopbackAddress && address is java.net.Inet4Address) {
+                            val ip = address.hostAddress
+                            if (ip != null && !ip.startsWith("127.")) {
+                                return ip
+                            }
                         }
                     }
                 }
@@ -268,7 +293,9 @@ class ConnectionManager(private val context: Context) {
 
         if (localParts.size != 4 || teacherParts.size != 4) return false
 
-        return localParts[0] == teacherParts[0] && localParts[1] == teacherParts[1] && localParts[2] == teacherParts[2]
+        return localParts[0] == teacherParts[0] && 
+               localParts[1] == teacherParts[1] && 
+               localParts[2] == teacherParts[2]
     }
 
     fun cleanup() {

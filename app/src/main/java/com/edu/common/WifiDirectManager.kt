@@ -1,9 +1,11 @@
 package com.edu.common
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.wifi.p2p.WifiP2pConfig
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pDeviceList
@@ -11,6 +13,7 @@ import android.net.wifi.p2p.WifiP2pInfo
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
 import android.util.Log
+import androidx.core.app.ActivityCompat
 
 class WifiDirectManager(private val context: Context) {
     
@@ -113,15 +116,51 @@ class WifiDirectManager(private val context: Context) {
             return
         }
         
+        if (!hasPermissions()) {
+            Log.w(TAG, "Missing permissions for WiFi Direct")
+            return
+        }
+        
         wifiP2pManager?.discoverPeers(channel, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 Log.d(TAG, "Discovery started")
+                
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    requestPeersAndConnect()
+                }, 3000)
             }
             
             override fun onFailure(reason: Int) {
                 Log.e(TAG, "Discovery failed: $reason")
             }
         })
+    }
+    
+    private fun requestPeersAndConnect() {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) 
+            != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+        
+        wifiP2pManager?.requestPeers(channel) { peers ->
+            val teacherDevices = peers?.deviceList?.filter { 
+                it.deviceName.contains("Teacher", ignoreCase = true) ||
+                it.deviceName.contains("معلم", ignoreCase = true) ||
+                it.isGroupOwner
+            } ?: emptyList()
+            
+            if (teacherDevices.isNotEmpty()) {
+                val teacher = teacherDevices.first()
+                Log.d(TAG, "Found teacher: ${teacher.deviceName}, connecting...")
+                connectToDevice(teacher)
+            } else if (peers?.deviceList?.isNotEmpty() == true) {
+                val firstDevice = peers.deviceList.first()
+                Log.d(TAG, "Connecting to first available device: ${firstDevice.deviceName}")
+                connectToDevice(firstDevice)
+            } else {
+                Log.d(TAG, "No devices found in peers list")
+            }
+        }
     }
     
     fun stopDiscovery() {
@@ -174,8 +213,17 @@ class WifiDirectManager(private val context: Context) {
     fun isEnabled(): Boolean = isWifiP2pEnabled
     
     fun hasPermissions(): Boolean {
-        return android.content.pm.PackageManager.PERMISSION_GRANTED == 
-            context.checkCallingOrSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        val hasLocation = ActivityCompat.checkSelfPermission(context, 
+            Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        
+        val hasNearbyWifi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.checkSelfPermission(context, 
+                Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        
+        return hasLocation && hasNearbyWifi
     }
     
     @Suppress("UNUSED_PARAMETER")
