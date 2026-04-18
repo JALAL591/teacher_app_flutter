@@ -1,11 +1,16 @@
 package com.edu.student.utils
 
 import android.Manifest
+import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -40,6 +45,15 @@ object PermissionHelper {
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            permissions.add(Manifest.permission.BLUETOOTH)
+            permissions.add(Manifest.permission.BLUETOOTH_ADMIN)
         }
         
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -107,6 +121,50 @@ object PermissionHelper {
             } else {
                 onDenied(deniedPermissions)
             }
+        }
+    }
+    
+    fun requestAllPermissions(activity: Activity, onGranted: () -> Unit) {
+        val permissions = mutableListOf<String>()
+        
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        permissions.add(Manifest.permission.ACCESS_WIFI_STATE)
+        permissions.add(Manifest.permission.CHANGE_WIFI_STATE)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        
+        val notGranted = permissions.filter {
+            ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED
+        }
+        
+        if (notGranted.isNotEmpty()) {
+            ActivityCompat.requestPermissions(activity, notGranted.toTypedArray(), REQUEST_PERMISSIONS)
+        } else {
+            onGranted()
+        }
+    }
+    
+    fun openAppSettings(activity: Activity) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        intent.data = Uri.fromParts("package", activity.packageName, null)
+        activity.startActivity(intent)
+    }
+    
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    }
+    
+    fun requestIgnoreBatteryOptimization(activity: Activity) {
+        if (!isIgnoringBatteryOptimizations(activity)) {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${activity.packageName}")
+            }
+            activity.startActivity(intent)
         }
     }
 }

@@ -50,6 +50,15 @@ object PermissionHelper {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
         
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            permissions.add(Manifest.permission.BLUETOOTH)
+            permissions.add(Manifest.permission.BLUETOOTH_ADMIN)
+        }
+        
         permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
         permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
         
@@ -175,5 +184,35 @@ object PermissionHelper {
                 onDenied(deniedPermissions)
             }
         }
+    }
+    
+    fun requestAllPermissions(activity: Activity, onGranted: () -> Unit) {
+        val permissions = mutableListOf<String>()
+        
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        permissions.add(Manifest.permission.ACCESS_WIFI_STATE)
+        permissions.add(Manifest.permission.CHANGE_WIFI_STATE)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        
+        val notGranted = permissions.filter {
+            ContextCompat.checkSelfPermission(activity, it) != PackageManager.PERMISSION_GRANTED
+        }
+        
+        if (notGranted.isNotEmpty()) {
+            ActivityCompat.requestPermissions(activity, notGranted.toTypedArray(), REQUEST_PERMISSIONS)
+        } else {
+            onGranted()
+        }
+    }
+    
+    fun openAppSettings(activity: Activity) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        intent.data = Uri.fromParts("package", activity.packageName, null)
+        activity.startActivity(intent)
     }
 }

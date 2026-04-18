@@ -17,6 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.databinding.*
 import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
+import com.edu.student.domain.model.AnswerSubmission
+import com.edu.student.domain.model.Lesson
 import com.edu.student.domain.model.Question
 import com.edu.student.services.TeacherClient
 import com.edu.student.ui.common.QuestionAdapter
@@ -50,7 +52,11 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     
     private var homeworkImageBase64: String? = null
     private var questions: List<Question> = emptyList()
+    private var currentLesson: Lesson? = null
     private var homeworkSubmitted = false
+    private var questionAnswers = mutableMapOf<String, String>()
+    private var textAnswers = mutableMapOf<String, String>()
+    private var imageAnswers = mutableMapOf<String, String>()
     
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { handleHomeworkImage(it) }
@@ -124,10 +130,20 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         }
         
         binding.submitHomeworkButton.setOnClickListener {
-            if (homeworkImageBase64 != null) {
+            if (questions.isNotEmpty()) {
+                showHomeworkOptions()
+            } else if (homeworkImageBase64 != null) {
                 submitHomework()
             } else {
                 Toast.makeText(this, "الرجاء التقاط صورة للحل أولاً", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        binding.saveHomeworkButton.setOnClickListener {
+            if (questions.isNotEmpty()) {
+                saveHomeworkSolution()
+            } else {
+                Toast.makeText(this, "لا توجد أسئلة لحفظها", Toast.LENGTH_SHORT).show()
             }
         }
         
@@ -240,6 +256,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         
         val lesson = lessons.find { it.id == lessonId }
         if (lesson != null) {
+            currentLesson = lesson
             if (lessonContent.isEmpty()) {
                 lessonContent = lesson.content
             }
@@ -265,7 +282,9 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         if (questions.isNotEmpty()) {
             binding.questionsRecycler.visibility = View.VISIBLE
             binding.questionsRecycler.layoutManager = LinearLayoutManager(this)
-            binding.questionsRecycler.adapter = QuestionAdapter(questions, repository, lessonId)
+            binding.questionsRecycler.adapter = QuestionAdapter(questions, repository, lessonId) { questionId, answer ->
+                saveAnswer(questionId, answer)
+            }
         }
     }
     
@@ -355,6 +374,63 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         }
     }
     
+    private fun showHomeworkOptions() {
+        val options = arrayOf("إرسال للمعلم الآن", "حفظ لإرسال لاحقاً")
+        
+        AlertDialog.Builder(this)
+            .setTitle("خيارات الواجب")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> submitHomeworkWithAnswers()
+                    1 -> saveHomeworkSolution()
+                }
+            }
+            .setNegativeButton("إلغاء", null)
+            .show()
+    }
+    
+    private fun submitHomeworkWithAnswers() {
+        if (!teacherClient.isConnected) {
+            Toast.makeText(this, "غير متصل بالمعلم، سيتم حفظ الواجب لإرساله لاحقاً", Toast.LENGTH_LONG).show()
+            saveHomeworkSolution()
+            return
+        }
+        
+        scope.launch(Dispatchers.Main) {
+            binding.submitHomeworkButton.isEnabled = false
+            binding.submitHomeworkButton.text = "جاري الإرسال..."
+            
+            val answers = collectAnswers()
+            val lesson = currentLesson ?: return@launch
+            
+            repository.saveHomeworkSolution(lesson.id, answers, lesson)
+            
+            val student = repository.getStudent()
+            
+            val answersJson = com.google.gson.Gson().toJson(answers)
+            
+            teacherClient.submitHomework(mapOf(
+                "studentId" to (student?.id ?: ""),
+                "studentName" to (student?.name ?: ""),
+                "lessonId" to lessonId,
+                "lessonTitle" to lessonTitle,
+                "subjectTitle" to subjectTitle,
+                "homeworkImage" to homeworkImageBase64,
+                "homeworkNote" to "",
+                "isCompleted" to true,
+                "answers" to answersJson
+            ))
+            
+            homeworkSubmitted = true
+            repository.addPoints(lessonId, "homework_submit", 20)
+            repository.removeHomeworkSolution(lessonId)
+            updatePoints()
+            
+            Toast.makeText(this@LessonActivity, "تم إرسال الواجب للمعلم!", Toast.LENGTH_LONG).show()
+            binding.submitHomeworkButton.text = "تم الإرسال ✓"
+        }
+    }
+    
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             val result = tts?.setLanguage(Locale("ar", "SA"))
@@ -371,4 +447,51 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     override fun onLessonsReceived(lessons: List<com.edu.student.domain.model.Lesson>) {}
     
     override fun onError(error: String) {}
+    
+    private fun saveHomeworkSolution() {
+        val lesson = currentLesson ?: run {
+            val lessons = repository.getSubjects().find { it.id == subjectId }?.lessons ?: emptyList()
+            lessons.find { it.id == lessonId }?.also { currentLesson = it }
+        } ?: return
+        
+        val answers = collectAnswers()
+        
+        repository.saveHomeworkSolution(lesson.id, answers, lesson)
+        
+        Toast.makeText(this, "تم حفظ الواجب. يمكنك إرساله لاحقاً من صفحة الإحصائيات", Toast.LENGTH_LONG).show()
+    }
+    
+    private fun collectAnswers(): List<AnswerSubmission> {
+        val answers = mutableListOf<AnswerSubmission>()
+        
+        for (question in questions) {
+            val answer = AnswerSubmission(
+                questionId = question.id,
+                questionText = question.text,
+                questionType = question.type,
+                selectedAnswer = questionAnswers[question.id],
+                correctAnswer = question.answer,
+                isCorrect = (questionAnswers[question.id] == question.answer),
+                textAnswer = textAnswers[question.id],
+                imageAnswer = imageAnswers[question.id]
+            )
+            answers.add(answer)
+        }
+        
+        return answers
+    }
+    
+    fun saveAnswer(questionId: String, answer: String) {
+        questionAnswers[questionId] = answer
+    }
+    
+    fun saveTextAnswer(questionId: String, text: String) {
+        textAnswers[questionId] = text
+    }
+    
+    fun saveImageAnswer(questionId: String, imageBase64: String?) {
+        if (imageBase64 != null) {
+            imageAnswers[questionId] = imageBase64
+        }
+    }
 }

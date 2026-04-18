@@ -12,7 +12,8 @@ import com.edu.student.domain.model.Question
 class QuestionAdapter(
     private val questions: List<Question>,
     private val repository: StudentRepository,
-    private val lessonId: String
+    private val lessonId: String,
+    private val onAnswerSelected: ((questionId: String, answer: String) -> Unit)? = null
 ) : RecyclerView.Adapter<QuestionAdapter.ViewHolder>() {
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -80,6 +81,8 @@ class QuestionAdapter(
         
         private fun checkAnswer(question: Question, selected: String, correct: String) {
             val isCorrect = selected.trim().equals(correct.trim(), ignoreCase = true)
+            
+            onAnswerSelected?.invoke(question.id, selected)
             
             if (isCorrect) {
                 repository.addPoints(lessonId, "q-${question.id}", 5)

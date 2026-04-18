@@ -5,6 +5,8 @@ import com.edu.student.data.preferences.StudentPreferences
 import com.edu.student.domain.model.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.UUID
 
 class StudentRepository(context: Context) {
@@ -96,6 +98,71 @@ class StudentRepository(context: Context) {
     fun getTheme(): String = prefs.getTheme()
     
     fun setTheme(theme: String) = prefs.setTheme(theme)
+    
+    fun saveHomeworkSolution(lessonId: String, answers: List<AnswerSubmission>, lesson: Lesson) {
+        val solution = JSONObject().apply {
+            put("lessonId", lessonId)
+            put("lessonTitle", lesson.title)
+            put("subjectId", lesson.subjectId)
+            put("subjectTitle", lesson.subjectTitle)
+            put("classId", lesson.classId)
+            put("timestamp", System.currentTimeMillis())
+            put("answers", JSONArray().apply {
+                answers.forEach { answer ->
+                    put(JSONObject().apply {
+                        put("questionId", answer.questionId)
+                        put("questionText", answer.questionText)
+                        put("questionType", answer.questionType)
+                        put("selectedAnswer", answer.selectedAnswer ?: "")
+                        put("correctAnswer", answer.correctAnswer ?: "")
+                        put("isCorrect", answer.isCorrect)
+                        put("textAnswer", answer.textAnswer ?: "")
+                        put("imageAnswer", answer.imageAnswer ?: "")
+                    })
+                }
+            })
+            put("summary", JSONObject().apply {
+                val correctCount = answers.count { it.isCorrect }
+                val totalQuestions = answers.size
+                put("totalQuestions", totalQuestions)
+                put("correctAnswers", correctCount)
+                put("wrongAnswers", totalQuestions - correctCount)
+                put("score", correctCount)
+                put("percentage", if (totalQuestions > 0) (correctCount * 100) / totalQuestions else 0)
+            })
+        }
+        
+        prefs.saveHomeworkSolution(lessonId, solution.toString())
+    }
+    
+    fun getHomeworkSolution(lessonId: String): JSONObject? {
+        val jsonStr = prefs.getHomeworkSolution(lessonId) ?: return null
+        return try {
+            JSONObject(jsonStr)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    fun getAllHomeworkSolutions(): List<JSONObject> {
+        val solutions = mutableListOf<JSONObject>()
+        val all = prefs.getAllHomeworkSolutions()
+        for ((_, jsonStr) in all) {
+            try {
+                solutions.add(JSONObject(jsonStr))
+            } catch (e: Exception) {
+            }
+        }
+        return solutions.sortedByDescending { it.optLong("timestamp", 0) }
+    }
+    
+    fun removeHomeworkSolution(lessonId: String) {
+        prefs.removeHomeworkSolution(lessonId)
+    }
+    
+    fun hasHomeworkSolution(lessonId: String): Boolean {
+        return prefs.getHomeworkSolution(lessonId) != null
+    }
     
     fun logout() {
         prefs.clearAll()

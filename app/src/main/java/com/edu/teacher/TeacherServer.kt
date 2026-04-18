@@ -1,15 +1,22 @@
 package com.edu.teacher
 
 import android.content.Context
+import android.net.wifi.WifiManager
 import android.util.Log
+import com.edu.common.BleDiscoveryManager
+import com.edu.teacher.network.TeacherBeacon
+import com.edu.teacher.utils.NetworkHelper
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.Locale
+import java.util.UUID
 
 class TeacherServer(private val context: Context) {
     
@@ -18,6 +25,8 @@ class TeacherServer(private val context: Context) {
         const val SERVER_PORT = 9999
     }
     
+    private val bleManager = BleDiscoveryManager(context)
+    private val beacon = TeacherBeacon(context)
     private var serverSocket: ServerSocket? = null
     var isRunning = false
         private set
@@ -28,6 +37,9 @@ class TeacherServer(private val context: Context) {
     private val clientSockets = mutableMapOf<PrintWriter, Socket>()
     
     var teacherId: String = ""
+        private set
+    
+    var teacherIP: String = "192.168.43.1"
         private set
     
     var onStudentConnected: ((String, String, String, String) -> Unit)? = null
@@ -68,8 +80,27 @@ class TeacherServer(private val context: Context) {
         
         scope.launch {
             try {
-                serverSocket = ServerSocket(SERVER_PORT)
-                Log.d(TAG, "Server started on port $SERVER_PORT - IP: 192.168.43.1")
+                serverSocket = ServerSocket().apply {
+                    reuseAddress = true
+                    bind(InetSocketAddress("0.0.0.0", SERVER_PORT))
+                }
+                
+                val localIp = NetworkHelper.getLocalIpAddress() ?: "192.168.43.1"
+                
+                Log.d(TAG, "======================================")
+                Log.d(TAG, "Server bound to 0.0.0.0:$SERVER_PORT")
+                Log.d(TAG, "Local IP: $localIp")
+                Log.d(TAG, "Teacher ID: $teacherId")
+                Log.d(TAG, "Server isRunning: $isRunning")
+                Log.d(TAG, "======================================")
+                
+                teacherIP = localIp
+                prefs.edit().putString("teacher_ip", localIp).apply()
+                
+                startBleAdvertising(localIp)
+                
+                beacon.startBeacon(SERVER_PORT)
+                Log.d(TAG, "Teacher beacon started")
                 
                 while (isRunning) {
                     try {
@@ -95,15 +126,18 @@ class TeacherServer(private val context: Context) {
         try {
             client.keepAlive = true
             client.tcpNoDelay = true
+            client.soTimeout = 0
+            client.receiveBufferSize = 128 * 1024
+            client.sendBufferSize = 128 * 1024
             
-            reader = BufferedReader(InputStreamReader(client.getInputStream()))
+            reader = BufferedReader(InputStreamReader(client.getInputStream(), "UTF-8"), 8192)
             writer = PrintWriter(client.getOutputStream(), true)
             
             connectedClients.add(writer)
             clientReaders[writer] = reader
             clientSockets[writer] = client
             
-            Log.d(TAG, "Client connected: ${client.inetAddress.hostAddress}")
+            Log.d(TAG, "Client connected: ${client.inetAddress.hostAddress}, total clients: ${connectedClients.size}")
             
             while (isRunning) {
                 try {
@@ -178,10 +212,85 @@ class TeacherServer(private val context: Context) {
                 }
                 
                 "HOMEWORK_SUBMISSION" -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val data = json.toMap()
-                    onHomeworkSubmitted?.invoke(data)
-                    sendAck(writer, "HOMEWORK_RECEIVED", null)
+                    Log.d(TAG, "========================================")
+                    Log.d(TAG, "=== HOMEWORK RECEIVED FROM STUDENT ===")
+                    Log.d(TAG, "========================================")
+                    Log.d(TAG, "Raw message length: ${message.length}")
+                    Log.d(TAG, "Student ID: ${json.optString("studentId", "unknown")}")
+                    Log.d(TAG, "Student Name: ${json.optString("studentName", "unknown")}")
+                    Log.d(TAG, "Lesson ID: ${json.optString("lessonId", "unknown")}")
+                    Log.d(TAG, "Lesson Title: ${json.optString("lessonTitle", "unknown")}")
+                    Log.d(TAG, "Answers array: ${json.optJSONArray("answers")?.length() ?: 0} items")
+                    Log.d(TAG, "========================================")
+                    
+                    try {
+                        val submissionId = json.optString("submissionId", UUID.randomUUID().toString())
+                        val studentId = json.optString("studentId", "")
+                        val studentName = json.optString("studentName", "")
+                        val studentGrade = json.optString("studentGrade", "")
+                        val studentSection = json.optString("studentSection", "")
+                        val avatar = json.optString("avatar", "")
+                        val lessonId = json.optString("lessonId", "")
+                        val lessonTitle = json.optString("lessonTitle", "")
+                        val subjectId = json.optString("subjectId", "")
+                        val subjectTitle = json.optString("subjectTitle", "")
+                        val classId = json.optString("classId", "")
+                        val timestamp = json.optLong("timestamp", System.currentTimeMillis())
+                        
+                        val answersArray = json.optJSONArray("answers") ?: JSONArray()
+                        val summaryJson = json.optJSONObject("summary") ?: JSONObject()
+                        
+                        val submission = JSONObject().apply {
+                            put("submissionId", submissionId)
+                            put("studentId", studentId)
+                            put("studentName", studentName)
+                            put("studentGrade", studentGrade)
+                            put("studentSection", studentSection)
+                            put("avatar", avatar)
+                            put("lessonId", lessonId)
+                            put("lessonTitle", lessonTitle)
+                            put("subjectId", subjectId)
+                            put("subjectTitle", subjectTitle)
+                            put("classId", classId)
+                            put("timestamp", timestamp)
+                            put("answers", answersArray)
+                            put("summary", summaryJson)
+                            put("status", "pending")
+                            put("teacherFeedback", "")
+                            put("finalScore", 0)
+                        }
+                        
+                        val teacherIdValue = teacherId.ifEmpty {
+                            context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
+                        }
+                        
+                        if (teacherIdValue.isNotEmpty()) {
+                            DataManager.addSubmission(context, teacherIdValue, submission)
+                            
+                            if (classId.isNotEmpty() && lessonId.isNotEmpty()) {
+                                DataManager.addSubmissionToLesson(context, teacherIdValue, classId, lessonId, submission)
+                                Log.d(TAG, "Homework saved for lesson: $lessonId in class: $classId")
+                            }
+                        }
+                        
+                        registeredStudents[studentId]?.let { student ->
+                            val earnedPoints = summaryJson.optInt("score", 0)
+                            student.points += earnedPoints
+                        }
+                        
+                        @Suppress("UNCHECKED_CAST")
+                        val data = json.toMap()
+                        onHomeworkSubmitted?.invoke(data)
+                        
+                        sendAck(writer, "HOMEWORK_RECEIVED", submissionId)
+                        
+                        Log.d(TAG, "Homework saved with ID: $submissionId")
+                        Log.d(TAG, "=== HOMEWORK PROCESSING COMPLETE ===")
+                        
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing homework submission: ${e.message}", e)
+                        sendAck(writer, "ERROR", null)
+                    }
                 }
                 
                 "PING" -> {
@@ -241,6 +350,7 @@ class TeacherServer(private val context: Context) {
             val response = JSONObject().apply {
                 put("status", status)
                 id?.let { put("id", it) }
+                put("teacherIP", teacherIP)
             }
             val jsonString = response.toString()
             if (isValidJson(jsonString)) {
@@ -349,58 +459,74 @@ class TeacherServer(private val context: Context) {
         scope.launch(Dispatchers.IO) {
             try {
                 val teacherIdValue = teacherId.ifEmpty {
-                    context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE).getString("teacher_id", "") ?: ""
+                    context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
+                        .getString("teacher_id", "") ?: ""
                 }
                 
                 val lessonWithSubject = sanitizeJsonObject(lesson)
                 val classId = lessonWithSubject.optString("classId", "")
                 
+                // جلب معلومات الفصل
                 val classInfo = DataManager.getClassById(context, teacherIdValue, classId)
                 val classGrade = classInfo?.optString("grade", "") ?: ""
                 val classSection = classInfo?.optString("section", "") ?: ""
                 
+                Log.d(TAG, "broadcastLesson: classId=$classId, grade=$classGrade, section=$classSection")
+                Log.d(TAG, "broadcastLesson: connectedClients size=${connectedClients.size}")
+                
+                // إذا لم يتم العثور على الفصل، استخدم القيم من الدرس نفسه
+                val finalGrade = if (classGrade.isNotEmpty()) classGrade 
+                    else lessonWithSubject.optString("grade", "")
+                val finalSection = if (classSection.isNotEmpty()) classSection 
+                    else lessonWithSubject.optString("section", "")
+                
+                // إضافة معلومات المادة
                 val subject = DataManager.getSubjectForClass(context, teacherIdValue, classId)
-                val subjectId = subject?.optString("id", "") ?: ""
-                val subjectTitle = subject?.optString("name", "") ?: ""
+                val subjectId = subject?.optString("id", "") ?: lessonWithSubject.optString("subjectId", "")
+                val subjectTitle = subject?.optString("name", "") ?: lessonWithSubject.optString("subjectTitle", "")
                 
                 lessonWithSubject.put("subjectId", subjectId)
                 lessonWithSubject.put("subjectTitle", subjectTitle)
-                lessonWithSubject.put("grade", classGrade)
-                lessonWithSubject.put("section", classSection)
+                lessonWithSubject.put("grade", finalGrade)
+                lessonWithSubject.put("section", finalSection)
                 
                 val message = JSONObject().apply {
                     put("action", "LESSON_BROADCAST")
                     put("lesson", lessonWithSubject)
-                    put("targetGrade", classGrade)
-                    put("targetSection", classSection)
+                    put("targetGrade", finalGrade)
+                    put("targetSection", finalSection)
                     put("classId", classId)
                     put("subjectId", subjectId)
                 }
                 
                 val messageStr = message.toString()
+                Log.d(TAG, "broadcastLesson: message=${messageStr.take(200)}")
+                
                 if (!isValidJson(messageStr)) {
                     Log.w(TAG, "Invalid JSON generated for lesson broadcast")
                     return@launch
                 }
                 
-                Log.d(TAG, "Broadcasting lesson to grade: $classGrade, section: $classSection, classId: $classId")
-                Log.d(TAG, "Lesson title: ${lesson.optString("title")}, Subject: $subjectTitle")
+                val clientsToRemove = mutableListOf<PrintWriter>()
                 
-                val disconnectedWriters = mutableListOf<PrintWriter>()
-                synchronized(connectedClients) {
-                    connectedClients.forEach { writer ->
-                        try {
-                            writer.println(messageStr)
-                            Log.d(TAG, "Sent lesson to client")
-                        } catch (e: java.io.IOException) {
-                            Log.e(TAG, "Write error broadcasting lesson: ${e.message}")
-                            disconnectedWriters.add(writer)
-                        }
+                connectedClients.forEach { writer ->
+                    try {
+                        writer.println(messageStr)
+                        Log.d(TAG, "Sent lesson to client")
+                    } catch (e: java.io.IOException) {
+                        Log.e(TAG, "Write error broadcasting lesson: ${e.message}")
+                        clientsToRemove.add(writer)
                     }
                 }
-                disconnectedWriters.forEach { removeDisconnectedClient(it) }
+                
+                clientsToRemove.forEach { writer ->
+                    connectedClients.remove(writer)
+                    clientReaders.remove(writer)
+                }
                 
                 Log.d(TAG, "Broadcasted lesson to ${connectedClients.size} clients")
+                Log.d(TAG, "Lesson sent successfully to all connected students")
+                
             } catch (e: Exception) {
                 Log.e(TAG, "Error in broadcastLesson", e)
             }
@@ -462,6 +588,9 @@ class TeacherServer(private val context: Context) {
     
     fun stop() {
         isRunning = false
+        
+        beacon.stopBeacon()
+        
         scope.cancel()
         
         synchronized(connectedClients) {
@@ -507,6 +636,62 @@ class TeacherServer(private val context: Context) {
         registeredStudents.clear()
         
         Log.d(TAG, "Server stopped")
+        
+        bleManager.stopAdvertising()
+        bleManager.destroy()
+    }
+    
+    private fun startBleAdvertising(teacherIp: String) {
+        if (!bleManager.hasBluetoothPermissions()) {
+            Log.w(TAG, "BLE permissions not granted, skipping BLE advertising")
+            return
+        }
+        
+        if (!bleManager.isBluetoothEnabled()) {
+            Log.w(TAG, "Bluetooth not enabled, skipping BLE advertising")
+            return
+        }
+        
+        val teacherName = getTeacherName()
+        bleManager.startAdvertising(teacherIp, teacherName, SERVER_PORT)
+        Log.d(TAG, "Started BLE advertising: $teacherIp:$teacherName")
+    }
+    
+    private fun getTeacherName(): String {
+        val prefs = context.getSharedPreferences("teacher_app", Context.MODE_PRIVATE)
+        return prefs.getString("teacher_name", "Teacher") ?: "Teacher"
+    }
+    
+    private fun getHotspotIP(): String {
+        try {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            @Suppress("DEPRECATION")
+            val wifiInfo = wifiManager.connectionInfo
+            @Suppress("DEPRECATION")
+            val ipAddress = wifiInfo.ipAddress
+            
+            if (ipAddress != 0) {
+                val ip = String.format(
+                    Locale.US,
+                    "%d.%d.%d.%d",
+                    ipAddress and 0xff,
+                    ipAddress shr 8 and 0xff,
+                    ipAddress shr 16 and 0xff,
+                    ipAddress shr 24 and 0xff
+                )
+                Log.d(TAG, "WiFi IP: $ip")
+                
+                if (ip.startsWith("192.168.43.")) {
+                    return ip
+                } else if (ip.startsWith("192.168.")) {
+                    val parts = ip.split(".")
+                    return "${parts[0]}.${parts[1]}.${parts[2]}.1"
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting hotspot IP: ${e.message}")
+        }
+        return "192.168.43.1"
     }
     
     fun isServerAlive(): Boolean {

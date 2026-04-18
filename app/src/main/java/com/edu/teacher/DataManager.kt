@@ -278,4 +278,237 @@ object DataManager {
         }
         return null
     }
+
+    // ==================== دوال البيانات الكاملة والتسليمات ====================
+
+    fun getFullTeacherData(context: Context, teacherId: String): JSONObject {
+        val result = JSONObject()
+        val subjectsArray = JSONArray()
+
+        val subjects = getSubjects(context, teacherId)
+
+        for (i in 0 until subjects.size) {
+            val subject = subjects[i]
+            val subjectId = subject.optString("id")
+            val subjectName = subject.optString("name", "")
+
+            val subjectWithClasses = JSONObject()
+            subjectWithClasses.put("id", subjectId)
+            subjectWithClasses.put("name", subjectName)
+
+            val classesArray = JSONArray()
+            val classes = getClasses(context, teacherId, subjectId)
+
+            for (j in 0 until classes.size) {
+                val cls = classes[j]
+                val classId = cls.optString("id")
+                val className = cls.optString("name", "")
+                val grade = cls.optString("grade", "")
+                val section = cls.optString("section", "")
+
+                val classWithLessons = JSONObject()
+                classWithLessons.put("id", classId)
+                classWithLessons.put("name", className)
+                classWithLessons.put("grade", grade)
+                classWithLessons.put("section", section)
+
+                val lessonsArray = JSONArray()
+                val lessons = getLessons(context, teacherId, classId)
+
+                for (k in 0 until lessons.size) {
+                    val lesson = lessons[k]
+                    val lessonId = lesson.optString("id")
+                    val lessonTitle = lesson.optString("title", "")
+
+                    val lessonWithSubmissions = JSONObject()
+                    lessonWithSubmissions.put("id", lessonId)
+                    lessonWithSubmissions.put("title", lessonTitle)
+                    lessonWithSubmissions.put("unit", lesson.optString("unit", ""))
+                    lessonWithSubmissions.put("createdAt", lesson.optString("createdAt", ""))
+
+                    val submissions = getSubmissionsForLesson(context, teacherId, classId, lessonId)
+                    val submissionsArray = JSONArray()
+                    for (submission in submissions) {
+                        submissionsArray.put(submission)
+                    }
+                    lessonWithSubmissions.put("submissions", submissionsArray)
+
+                    val stats = calculateLessonStats(submissions)
+                    lessonWithSubmissions.put("stats", stats)
+
+                    lessonsArray.put(lessonWithSubmissions)
+                }
+
+                classWithLessons.put("lessons", lessonsArray)
+                classesArray.put(classWithLessons)
+            }
+
+            subjectWithClasses.put("classes", classesArray)
+            subjectsArray.put(subjectWithClasses)
+        }
+
+        result.put("subjects", subjectsArray)
+        return result
+    }
+
+    fun addSubmission(context: Context, teacherId: String, submission: JSONObject) {
+        val submissions = getSubmissions(context, teacherId)
+        submissions.add(submission)
+        saveSubmissions(context, teacherId, submissions)
+    }
+
+    fun addSubmissionToLesson(
+        context: Context,
+        teacherId: String,
+        classId: String,
+        lessonId: String,
+        submission: JSONObject
+    ) {
+        val key = "submissions_lesson_${teacherId}_${classId}_${lessonId}"
+        val prefs = getPrefs(context)
+        val existingJson = prefs.getString(key, "[]") ?: "[]"
+        val array = JSONArray(existingJson)
+        array.put(submission)
+        prefs.edit().putString(key, array.toString()).apply()
+    }
+
+    fun getSubmissionsForLesson(context: Context, teacherId: String, classId: String, lessonId: String): MutableList<JSONObject> {
+        val key = "submissions_lesson_${teacherId}_${classId}_${lessonId}"
+        val prefs = getPrefs(context)
+        val jsonStr = prefs.getString(key, "[]") ?: "[]"
+        val array = JSONArray(jsonStr)
+        val list = mutableListOf<JSONObject>()
+        for (i in 0 until array.length()) {
+            list.add(array.getJSONObject(i))
+        }
+        return list
+    }
+
+    fun calculateLessonStats(submissions: List<JSONObject>): JSONObject {
+        val totalStudents = submissions.size
+        var totalScore = 0
+        var totalQuestions = 0
+        var completedCount = 0
+
+        for (sub in submissions) {
+            val summary = sub.optJSONObject("summary")
+            if (summary != null) {
+                totalScore += summary.optInt("score", 0)
+                totalQuestions += summary.optInt("totalQuestions", 0)
+                completedCount++
+            }
+        }
+
+        val averageScore = if (totalQuestions > 0) (totalScore * 100) / totalQuestions else 0
+        val completionRate = if (totalStudents > 0) (completedCount * 100) / totalStudents else 0
+
+        return JSONObject().apply {
+            put("totalSubmissions", totalStudents)
+            put("completedCount", completedCount)
+            put("completionRate", completionRate)
+            put("averageScore", averageScore)
+        }
+    }
+
+    fun getPendingSubmissions(context: Context, teacherId: String): MutableList<JSONObject> {
+        val allSubmissions = getSubmissions(context, teacherId)
+        val pendingList = mutableListOf<JSONObject>()
+        for (sub in allSubmissions) {
+            if (sub.optString("status") == "pending") {
+                pendingList.add(sub)
+            }
+        }
+        return pendingList
+    }
+
+    fun getGradedSubmissions(context: Context, teacherId: String): MutableList<JSONObject> {
+        val allSubmissions = getSubmissions(context, teacherId)
+        val gradedList = mutableListOf<JSONObject>()
+        for (sub in allSubmissions) {
+            if (sub.optString("status") == "graded") {
+                gradedList.add(sub)
+            }
+        }
+        return gradedList
+    }
+
+    fun gradeSubmission(context: Context, teacherId: String, submissionId: String, score: Int, feedback: String) {
+        val submissions = getSubmissions(context, teacherId)
+        var foundIndex = -1
+        var foundSubmission: JSONObject? = null
+
+        for (i in 0 until submissions.size) {
+            if (submissions[i].optString("submissionId") == submissionId) {
+                foundIndex = i
+                foundSubmission = submissions[i]
+                break
+            }
+        }
+
+        if (foundIndex >= 0 && foundSubmission != null) {
+            foundSubmission.put("status", "graded")
+            foundSubmission.put("finalScore", score)
+            foundSubmission.put("teacherFeedback", feedback)
+            foundSubmission.put("gradedAt", System.currentTimeMillis())
+            submissions[foundIndex] = foundSubmission
+            saveSubmissions(context, teacherId, submissions)
+
+            val classId = foundSubmission.optString("classId", "")
+            val lessonId = foundSubmission.optString("lessonId", "")
+            if (classId.isNotEmpty() && lessonId.isNotEmpty()) {
+                updateSubmissionInLesson(context, teacherId, classId, lessonId, foundSubmission)
+            }
+        }
+    }
+
+    private fun updateSubmissionInLesson(context: Context, teacherId: String, classId: String, lessonId: String, updatedSubmission: JSONObject) {
+        val key = "submissions_lesson_${teacherId}_${classId}_${lessonId}"
+        val prefs = getPrefs(context)
+        val existingJson = prefs.getString(key, "[]") ?: "[]"
+        val array = JSONArray(existingJson)
+
+        val submissionId = updatedSubmission.optString("submissionId")
+        for (i in 0 until array.length()) {
+            if (array.getJSONObject(i).optString("submissionId") == submissionId) {
+                array.put(i, updatedSubmission)
+                break
+            }
+        }
+
+        prefs.edit().putString(key, array.toString()).apply()
+    }
+
+    fun getSubmissionsStats(context: Context, teacherId: String): JSONObject {
+        val submissions = getSubmissions(context, teacherId)
+        val total = submissions.size
+        var pending = 0
+        var graded = 0
+
+        var totalQuestions = 0
+        var totalScore = 0
+
+        for (sub in submissions) {
+            val status = sub.optString("status", "pending")
+            if (status == "pending") {
+                pending++
+            } else if (status == "graded") {
+                graded++
+            }
+
+            val summary = sub.optJSONObject("summary")
+            if (summary != null) {
+                totalQuestions += summary.optInt("totalQuestions", 0)
+                totalScore += summary.optInt("score", 0)
+            }
+        }
+
+        val avgPercentage = if (totalQuestions > 0) (totalScore * 100) / totalQuestions else 0
+
+        return JSONObject().apply {
+            put("totalSubmissions", total)
+            put("pendingSubmissions", pending)
+            put("gradedSubmissions", graded)
+            put("averageScore", avgPercentage)
+        }
+    }
 }

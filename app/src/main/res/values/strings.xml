@@ -417,4 +417,21 @@
     <string name="student_no_subjects">لا توجد مواد متاحة حالياً</string>
     <string name="student_lesson_content">محتوى الدرس</string>
 
+    <!-- ===== Submissions ===== -->
+    <string name="lesson_submissions">تسليمات الدرس</string>
+    <string name="total">الإجمالي</string>
+    <string name="completed">مُنجز</string>
+    <string name="completion_rate">نسبة الإكمال</string>
+    <string name="average_score">متوسط الدرجات</string>
+    <string name="no_submissions">لا توجد تسليمات بعد</string>
+    <string name="view_image">عرض الصورة</string>
+    <string name="homework_image">صورة الواجب</string>
+    <string name="view_details">عرض التفاصيل</string>
+    <string name="grade">تصحيح</string>
+    <string name="submissions">تسليمات</string>
+    <string name="class_info">معلومات الفصل</string>
+    <string name="view">عرض</string>
+    <string name="lessons">دروس</string>
+    <string name="classes">فصول</string>
+
 </resources>

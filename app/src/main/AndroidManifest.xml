@@ -11,10 +11,13 @@
     
     <!-- Hotspot/Tethering Permissions -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS" android:maxSdkVersion="28" />
+    
+    <!-- Bluetooth Permissions (Android 12+) -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:usesPermissionFlags="neverForLocation" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     
     <!-- Location Permissions (Required for WiFi scanning) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -32,11 +35,20 @@
     <!-- Foreground Service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Android 16 Specific Permissions -->
+    <uses-permission android:name="android.permission.MANAGE_WIFI_NETWORK_SELECTION" />
     
     <!-- Features -->
-    <uses-feature android:name="android.hardware.wifi.direct" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi.direct" android:required="true" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
+
+<!-- صلاحية الظهور فوق التطبيقات الأخرى (ضرورية لـ Samsung Android 14+) -->
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:name=".TeacherApp"
@@ -74,6 +86,12 @@
         <activity android:name=".SettingsActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
         <activity android:name=".LessonDetailsActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
 
+        <!-- Teacher Stats Activities -->
+        <activity
+            android:name=".ui.stats.LessonSubmissionsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <!-- Student App Activities -->
         <activity android:name="com.edu.student.ui.login.ActivationActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
         <activity android:name="com.edu.student.ui.dashboard.DashboardActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
@@ -83,7 +101,7 @@
         <activity android:name="com.edu.student.ui.sync.SyncActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
         <activity android:name="com.edu.student.ui.settings.SettingsActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
 
-        <provider
+<provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
             android:exported="false"
@@ -92,6 +110,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-
+        
+        <!-- Teacher Server Service -->
+        <service
+            android:name=".TeacherServerService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+        
     </application>
 </manifest>

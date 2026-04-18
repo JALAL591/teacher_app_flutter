@@ -173,20 +173,23 @@ class ClassManagerActivity : AppCompatActivity() {
     }
 
     private fun broadcastLesson(lesson: JSONObject, @Suppress("UNUSED_PARAMETER") position: Int) {
+        android.util.Log.d("ClassManager", "broadcastLesson called for: ${lesson.optString("title")}")
         Toast.makeText(this, "جاري بث الدرس: ${lesson.optString("title")}", Toast.LENGTH_SHORT).show()
         
-        var server = (application as? TeacherApp)?.teacherServer
-        if (server == null) {
-            server = TeacherServer(this)
-            (application as? TeacherApp)?.teacherServer = server
+        val server = (application as? TeacherApp)?.teacherServer ?: TeacherServer(this).also {
+            (application as? TeacherApp)?.teacherServer = it
         }
         
-        if ((application as? TeacherApp)?.teacherServer?.isRunning != true) {
+        if (!server.isRunning) {
+            android.util.Log.d("ClassManager", "Server not running, starting...")
             server.start()
+            (application as? TeacherApp)?.teacherServer = server
             Toast.makeText(this, "تم تشغيل الرادار تلقائياً", Toast.LENGTH_SHORT).show()
         }
         
+        android.util.Log.d("ClassManager", "Calling server.broadcastLesson()")
         server.broadcastLesson(lesson)
+        android.util.Log.d("ClassManager", "broadcastLesson completed")
         Toast.makeText(this, "تم بث الدرس للطلاب المتصلين", Toast.LENGTH_SHORT).show()
     }
 

@@ -10,6 +10,7 @@ import android.graphics.drawable.GradientDrawable
 import android.location.LocationManager
 import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pInfo
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -24,10 +25,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.edu.common.WifiDirectManager
 import com.edu.teacher.databinding.ActivitySyncBinding
 import com.edu.teacher.databinding.ItemConnectedStudentBinding
 import com.edu.teacher.databinding.ItemSubjectBinding
-import com.edu.teacher.utils.WifiDirectManager
+import com.edu.teacher.utils.NetworkHelper
+import com.edu.teacher.utils.PermissionHelper
 import com.edu.teacher.utils.WifiP2pBroadcastListener
 import org.json.JSONObject
 import java.net.InetAddress

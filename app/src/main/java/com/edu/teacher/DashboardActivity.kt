@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.LayoutInflater
@@ -18,8 +19,10 @@ import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.edu.common.WifiDirectManager
 import com.edu.teacher.databinding.ActivityDashboardBinding
 import com.edu.teacher.databinding.ItemClassBinding
+import com.edu.teacher.utils.NetworkHelper
 import com.edu.teacher.utils.PermissionHelper
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -33,6 +36,10 @@ class DashboardActivity : BaseActivity() {
 
     private var classesList = mutableListOf<JSONObject>()
     private var teacherId: String = ""
+    
+    private var teacherServiceIntent: Intent? = null
+    private var teacherServer: TeacherServer? = null
+    private val wifiDirectManager by lazy { WifiDirectManager(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +60,56 @@ class DashboardActivity : BaseActivity() {
         if (!PermissionHelper.hasNotificationPermission(this)) {
             PermissionHelper.requestNotificationPermission(this)
         }
+        
+        if (!PermissionHelper.isIgnoringBatteryOptimizations(this)) {
+            AlertDialog.Builder(this)
+                .setTitle("تحسين البطارية")
+                .setMessage("لضمان استمرار الاتصال، يرجى تعطيل تحسين البطارية للتطبيق")
+                .setPositiveButton("تعطيل") { _, _ ->
+                    PermissionHelper.requestIgnoreBatteryOptimization(this)
+                }
+                .setNegativeButton("لاحقاً", null)
+                .show()
+        }
+    }
+    
+    private fun startTeacherServer() {
+        when (NetworkHelper.checkNetworkReadiness(this)) {
+            NetworkHelper.NetworkStatus.WIFI_DISABLED -> {
+                Toast.makeText(this, "يرجى تفعيل WiFi", Toast.LENGTH_SHORT).show()
+                return
+            }
+            NetworkHelper.NetworkStatus.WIFI_NOT_CONNECTED -> {
+                Toast.makeText(this, "يرجى الاتصال بشبكة WiFi", Toast.LENGTH_SHORT).show()
+                return
+            }
+            NetworkHelper.NetworkStatus.PERMISSIONS_MISSING -> {
+                PermissionHelper.requestPermissions(this)
+                return
+            }
+            NetworkHelper.NetworkStatus.BATTERY_OPTIMIZATION_ENABLED -> {
+                checkPermissions()
+                return
+            }
+            NetworkHelper.NetworkStatus.READY -> {
+                // جاهز للبدء
+            }
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            teacherServiceIntent = Intent(this, TeacherServerService::class.java)
+            startForegroundService(teacherServiceIntent!!)
+        } else {
+            teacherServer = TeacherServer(this)
+            teacherServer?.start()
+        }
+    }
+    
+    private fun stopTeacherServer() {
+        teacherServiceIntent?.let {
+            stopService(it)
+        }
+        teacherServer?.stop()
     }
     
     override fun onRequestPermissionsResult(
@@ -307,5 +364,10 @@ class DashboardActivity : BaseActivity() {
             updateStats()
             Toast.makeText(this@DashboardActivity, R.string.toast_class_deleted, Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    override fun onDestroy() {
+        stopTeacherServer()
+        super.onDestroy()
     }
 }

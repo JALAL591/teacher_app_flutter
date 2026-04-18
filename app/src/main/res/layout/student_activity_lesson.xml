@@ -318,6 +318,17 @@
                     android:textSize="14sp"
                     android:textStyle="bold"
                     app:cornerRadius="16dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/saveHomeworkButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:backgroundTint="@color/amber_500"
+                    android:text="حفظ الواجب"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    app:cornerRadius="16dp" />
             </LinearLayout>
         </FrameLayout>
     </ScrollView>

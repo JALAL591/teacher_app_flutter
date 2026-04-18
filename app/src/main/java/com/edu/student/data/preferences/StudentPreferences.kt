@@ -104,4 +104,28 @@ class StudentPreferences(context: Context) {
     fun clearAll() {
         prefs.edit().clear().apply()
     }
+    
+    fun saveHomeworkSolution(lessonId: String, solution: String) {
+        prefs.edit().putString("homework_$lessonId", solution).apply()
+    }
+    
+    fun getHomeworkSolution(lessonId: String): String? {
+        return prefs.getString("homework_$lessonId", null)
+    }
+    
+    fun removeHomeworkSolution(lessonId: String) {
+        prefs.edit().remove("homework_$lessonId").apply()
+    }
+    
+    fun getAllHomeworkSolutions(): Map<String, String> {
+        val all = prefs.all
+        val solutions = mutableMapOf<String, String>()
+        for ((key, value) in all) {
+            if (key.startsWith("homework_") && value is String) {
+                val lessonId = key.removePrefix("homework_")
+                solutions[lessonId] = value
+            }
+        }
+        return solutions
+    }
 }

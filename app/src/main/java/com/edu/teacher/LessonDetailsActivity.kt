@@ -342,6 +342,7 @@ class LessonDetailsActivity : BaseActivity() {
     }
 
     private fun broadcastLesson() {
+        android.util.Log.d("LessonDetails", "broadcastLesson called for: $lessonTitle")
         Toast.makeText(this, getString(R.string.status_publishing, lessonTitle), Toast.LENGTH_SHORT).show()
 
         val publishedLesson = JSONObject(lessonJson.toString())
@@ -352,6 +353,19 @@ class LessonDetailsActivity : BaseActivity() {
 
         isPublished = true
         lessonJson = publishedLesson
+
+        val server = (application as? TeacherApp)?.teacherServer
+        android.util.Log.d("LessonDetails", "Server running: ${server?.isRunning == true}")
+        
+        if (server != null && server.isRunning) {
+            android.util.Log.d("LessonDetails", "Calling server.broadcastLesson()")
+            server.broadcastLesson(publishedLesson)
+            android.util.Log.d("LessonDetails", "Lesson broadcast completed")
+            Toast.makeText(this, "تم إرسال الدرس للطلاب", Toast.LENGTH_SHORT).show()
+        } else {
+            android.util.Log.w("LessonDetails", "Server not running - lesson saved only")
+            Toast.makeText(this, "الرادار غير نشط - الدرس محفوظ", Toast.LENGTH_SHORT).show()
+        }
 
         updatePublishStatus()
         updateBroadcastButton()
