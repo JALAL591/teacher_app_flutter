@@ -81,10 +81,12 @@ class ConnectionManager(private val context: Context) {
         }
         
         var resultIp: String? = null
+        var resultPort: Int = SERVER_PORT
         val foundCallback = object : BleDiscoveryManager.DiscoveryCallback {
             override fun onTeacherFound(ip: String, port: Int, deviceName: String) {
                 if (bleDiscoveryDone.compareAndSet(false, true)) {
                     resultIp = ip
+                    resultPort = port
                 }
             }
             
@@ -112,8 +114,16 @@ class ConnectionManager(private val context: Context) {
             }
             
             if (discoveredIp != null) {
-                Log.d(TAG, "BLE discovery successful: $discoveredIp")
-                return@withContext discoveredIp
+                Log.d(TAG, "BLE discovery successful: $discoveredIp:$resultPort")
+                
+                val connected = tryConnectToTeacher(discoveredIp, resultPort)
+                if (connected) {
+                    Log.d(TAG, "BLE: Socket connection established")
+                    return@withContext discoveredIp
+                } else {
+                    Log.e(TAG, "BLE: Failed to establish Socket connection")
+                    return@withContext null
+                }
             } else {
                 Log.w(TAG, "BLE discovery timeout or failed")
                 return@withContext null
@@ -167,7 +177,15 @@ class ConnectionManager(private val context: Context) {
             
             if (discoveredIp != null) {
                 Log.d(TAG, "WiFi Direct discovery successful: $discoveredIp")
-                return@withContext discoveredIp
+                
+                val connected = tryConnectToTeacher(discoveredIp, SERVER_PORT)
+                if (connected) {
+                    Log.d(TAG, "WiFi Direct: Socket connection established")
+                    return@withContext discoveredIp
+                } else {
+                    Log.e(TAG, "WiFi Direct: Failed to establish Socket connection")
+                    return@withContext null
+                }
             } else {
                 Log.w(TAG, "WiFi Direct discovery timeout")
                 return@withContext null
@@ -196,7 +214,10 @@ class ConnectionManager(private val context: Context) {
         val localIp = getLocalIpAddress() ?: return@withContext null
 
         return@withContext when {
-            localIp.startsWith("192.168.43.") -> scanNetworkForTeacher(localIp)
+            localIp.startsWith("192.168.43.") -> {
+                val ip = scanNetworkForTeacher(localIp)
+                if (ip != null) ip else "192.168.43.1"
+            }
             localIp.startsWith("192.168.49.") -> "192.168.49.1"
             else -> null
         }
@@ -231,7 +252,11 @@ class ConnectionManager(private val context: Context) {
                     val result = job.await()
                     if (result != null) {
                         jobs.forEach { it.cancel() }
-                        return@withContext result
+                        
+                        val connected = tryConnectToTeacher(result, SERVER_PORT)
+                        if (connected) {
+                            return@withContext result
+                        }
                     }
                 }
                 jobs.clear()
@@ -242,7 +267,11 @@ class ConnectionManager(private val context: Context) {
             val result = job.await()
             if (result != null) {
                 jobs.forEach { it.cancel() }
-                return@withContext result
+                
+                val connected = tryConnectToTeacher(result, SERVER_PORT)
+                if (connected) {
+                    return@withContext result
+                }
             }
         }
 
@@ -296,6 +325,19 @@ class ConnectionManager(private val context: Context) {
         return localParts[0] == teacherParts[0] && 
                localParts[1] == teacherParts[1] && 
                localParts[2] == teacherParts[2]
+    }
+
+    private fun tryConnectToTeacher(ip: String, port: Int, timeout: Int = 3000): Boolean {
+        return try {
+            val socket = Socket()
+            socket.connect(InetSocketAddress(ip, port), timeout)
+            socket.close()
+            Log.d(TAG, "Successfully connected to teacher at $ip:$port")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to connect to teacher at $ip:$port: ${e.message}")
+            false
+        }
     }
 
     fun cleanup() {
