@@ -353,10 +353,12 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             binding.submitHomeworkButton.text = "جاري الإرسال..."
             
             val student = repository.getStudent()
+            val classId = currentLesson?.classId ?: ""
             
             teacherClient.submitHomework(mapOf(
                 "studentId" to (student?.id ?: ""),
                 "studentName" to (student?.name ?: ""),
+                "classId" to classId,
                 "lessonId" to lessonId,
                 "lessonTitle" to lessonTitle,
                 "subjectTitle" to subjectTitle,
@@ -406,12 +408,14 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             repository.saveHomeworkSolution(lesson.id, answers, lesson)
             
             val student = repository.getStudent()
+            val classId = lesson.classId
             
             val answersJson = com.google.gson.Gson().toJson(answers)
             
             teacherClient.submitHomework(mapOf(
                 "studentId" to (student?.id ?: ""),
                 "studentName" to (student?.name ?: ""),
+                "classId" to classId,
                 "lessonId" to lessonId,
                 "lessonTitle" to lessonTitle,
                 "subjectTitle" to subjectTitle,
