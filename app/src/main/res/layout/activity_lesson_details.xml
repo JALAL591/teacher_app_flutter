@@ -159,6 +159,21 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
+                    <!-- Lesson Image -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/lessonImageCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="gone"
+                        app:cardCornerRadius="12dp">
+                        <ImageView
+                            android:id="@+id/lessonImage"
+                            android:layout_width="match_parent"
+                            android:layout_height="200dp"
+                            android:scaleType="centerCrop" />
+                    </com.google.android.material.card.MaterialCardView>
+
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/videoCard"
                         android:layout_width="match_parent"
@@ -170,6 +185,15 @@
                             <ImageButton android:id="@+id/playVideoButton" android:layout_width="64dp" android:layout_height="64dp" android:layout_gravity="center" android:src="@drawable/ic_play" />
                         </FrameLayout>
                     </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Video Button -->
+                    <Button
+                        android:id="@+id/videoButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Play Video"
+                        android:visibility="gone"
+                        android:layout_marginTop="8dp" />
 
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/imagesCard"

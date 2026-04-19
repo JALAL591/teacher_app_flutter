@@ -59,11 +59,25 @@ class TeacherApp : Application() {
         _instance = this
         syncTheme()
         
+        createMediaDirectories()
+        
         GlobalScope.launch {
             ModelManager.copyModelsAsync(this@TeacherApp) { model, progress ->
                 android.util.Log.d("TeacherApp", "Copying $model: $progress%")
             }
             ModelManager.logModelsInfo(this@TeacherApp)
+        }
+    }
+    
+    private fun createMediaDirectories() {
+        val directories = listOf("images", "videos", "pdfs", "lessons")
+        
+        directories.forEach { dir ->
+            val file = java.io.File(filesDir, dir)
+            if (!file.exists()) {
+                file.mkdirs()
+                android.util.Log.d("TeacherApp", "Created $dir directory: ${file.absolutePath}")
+            }
         }
     }
 }

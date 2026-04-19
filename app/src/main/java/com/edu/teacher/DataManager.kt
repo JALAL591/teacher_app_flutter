@@ -21,6 +21,14 @@ object DataManager {
     private const val KEY_SUBMISSIONS_PREFIX = "submissions_"
     private const val KEY_ATTENDANCE_PREFIX = "attendance_"
     private const val KEY_LAST_SYNC = "last_sync_time"
+    private const val KEY_IS_LOGGED_IN = "is_logged_in"
+    private const val KEY_REMEMBER_ME = "remember_me"
+    private const val KEY_SAVED_USER_ID = "saved_user_id"
+    private const val KEY_SAVED_PASSWORD = "saved_password"
+    private const val KEY_CURRENT_TEACHER_ID = "current_teacher_id"
+    private const val KEY_CURRENT_TEACHER_NAME = "current_teacher_name"
+    private const val KEY_SCHOOL_NAME = "school_name"
+    private const val KEY_LAST_LOGIN_TIME = "last_login_time"
 
     // ==================== إنشاء معرفات فريدة ====================
 
@@ -60,6 +68,73 @@ object DataManager {
     fun getTeacherName(context: Context): String {
         return getTeacherInfo(context)?.optString("name", context.getString(R.string.default_teacher))
             ?: context.getString(R.string.default_teacher)
+    }
+    
+    // ==================== Login State ====================
+    fun loginTeacher(context: Context, teacherId: String, teacherName: String, schoolName: String = "") {
+        getPrefs(context).edit().putBoolean(KEY_IS_LOGGED_IN, true).apply()
+        getPrefs(context).edit().putString(KEY_CURRENT_TEACHER_ID, teacherId).apply()
+        getPrefs(context).edit().putString(KEY_CURRENT_TEACHER_NAME, teacherName).apply()
+        getPrefs(context).edit().putString(KEY_SCHOOL_NAME, schoolName).apply()
+        getPrefs(context).edit().putLong(KEY_LAST_LOGIN_TIME, System.currentTimeMillis()).apply()
+    }
+    
+    fun isLoggedIn(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_IS_LOGGED_IN, false)
+    }
+    
+    fun logoutTeacher(context: Context) {
+        getPrefs(context).edit().remove(KEY_IS_LOGGED_IN).apply()
+        getPrefs(context).edit().remove(KEY_CURRENT_TEACHER_ID).apply()
+        getPrefs(context).edit().remove(KEY_CURRENT_TEACHER_NAME).apply()
+        getPrefs(context).edit().remove(KEY_LAST_LOGIN_TIME).apply()
+    }
+    
+    fun getCurrentTeacherInfo(context: Context): TeacherInfo? {
+        if (!isLoggedIn(context)) return null
+        return TeacherInfo(
+            id = getPrefs(context).getString(KEY_CURRENT_TEACHER_ID, "") ?: "",
+            name = getPrefs(context).getString(KEY_CURRENT_TEACHER_NAME, "") ?: "",
+            schoolName = getPrefs(context).getString(KEY_SCHOOL_NAME, "") ?: ""
+        )
+    }
+    
+    data class TeacherInfo(
+        val id: String,
+        val name: String,
+        val schoolName: String
+    )
+    
+    // ==================== Remember Me ====================
+    fun saveLoginCredentials(context: Context, userId: String, password: String, rememberMe: Boolean) {
+        getPrefs(context).edit().putString(KEY_SAVED_USER_ID, userId).apply()
+        
+        if (rememberMe && password.isNotEmpty()) {
+            val encodedPassword = android.util.Base64.encodeToString(
+                password.toByteArray(), 
+                android.util.Base64.NO_WRAP
+            )
+            getPrefs(context).edit().putString(KEY_SAVED_PASSWORD, encodedPassword).apply()
+            getPrefs(context).edit().putBoolean(KEY_REMEMBER_ME, true).apply()
+        } else {
+            getPrefs(context).edit().remove(KEY_SAVED_PASSWORD).apply()
+            getPrefs(context).edit().putBoolean(KEY_REMEMBER_ME, false).apply()
+        }
+    }
+    
+    fun getSavedCredentials(context: Context): Pair<String?, String?> {
+        val userId = getPrefs(context).getString(KEY_SAVED_USER_ID, null)
+        val encodedPassword = getPrefs(context).getString(KEY_SAVED_PASSWORD, null)
+        val password = encodedPassword?.let {
+            try {
+                String(android.util.Base64.decode(it, android.util.Base64.NO_WRAP))
+            } catch (e: Exception) { null }
+        }
+        return Pair(userId, password)
+    }
+    
+    fun isRememberMeEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_REMEMBER_ME, false)
     }
 
     // ==================== إدارة المواد (Subjects) ====================

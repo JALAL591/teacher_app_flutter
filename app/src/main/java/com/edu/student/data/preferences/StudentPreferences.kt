@@ -21,6 +21,69 @@ class StudentPreferences(context: Context) {
         private const val KEY_TEACHER_IP = "teacher_ip"
         private const val KEY_ASSIGNED_TEACHER_ID = "assigned_teacher_id"
         private const val KEY_STUDENT_CACHE_PREFIX = "student_cache_"
+        private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_REMEMBER_ME = "remember_me"
+        private const val KEY_SAVED_USER_ID = "saved_user_id"
+        private const val KEY_SAVED_PASSWORD = "saved_password"
+    }
+    
+    // ==================== Login State ====================
+    fun loginStudent(studentId: String, studentName: String, grade: String, section: String) {
+        prefs.edit().putBoolean(KEY_IS_LOGGED_IN, true).apply()
+        prefs.edit().putString("current_student_id", studentId).apply()
+        prefs.edit().putString("current_student_name", studentName).apply()
+        prefs.edit().putString("current_grade", grade).apply()
+        prefs.edit().putString("current_section", section).apply()
+        prefs.edit().putLong("last_login_time", System.currentTimeMillis()).apply()
+    }
+    
+    fun isLoggedIn(): Boolean {
+        return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+    }
+    
+    fun logout() {
+        prefs.edit().remove(KEY_IS_LOGGED_IN).apply()
+        prefs.edit().remove("current_student_id").apply()
+        prefs.edit().remove("current_student_name").apply()
+        prefs.edit().remove("current_grade").apply()
+        prefs.edit().remove("current_section").apply()
+        prefs.edit().remove("last_login_time").apply()
+    }
+    
+    fun getCurrentStudent(): Student? {
+        return if (isLoggedIn()) getStudent() else null
+    }
+    
+    // ==================== Remember Me ====================
+    fun saveLoginCredentials(userId: String, password: String, rememberMe: Boolean) {
+        prefs.edit().putString(KEY_SAVED_USER_ID, userId).apply()
+        
+        if (rememberMe && password.isNotEmpty()) {
+            val encodedPassword = android.util.Base64.encodeToString(
+                password.toByteArray(), 
+                android.util.Base64.NO_WRAP
+            )
+            prefs.edit().putString(KEY_SAVED_PASSWORD, encodedPassword).apply()
+            prefs.edit().putBoolean(KEY_REMEMBER_ME, true).apply()
+        } else {
+            prefs.edit().remove(KEY_SAVED_PASSWORD).apply()
+            prefs.edit().putBoolean(KEY_REMEMBER_ME, false).apply()
+        }
+    }
+    
+    fun getSavedCredentials(): Pair<String?, String?> {
+        val userId = prefs.getString(KEY_SAVED_USER_ID, null)
+        val encodedPassword = prefs.getString(KEY_SAVED_PASSWORD, null)
+        val password = encodedPassword?.let {
+            try {
+                String(android.util.Base64.decode(it, android.util.Base64.NO_WRAP))
+            } catch (e: Exception) { null }
+        }
+        return Pair(userId, password)
+    }
+    
+    fun isRememberMeEnabled(): Boolean {
+        return prefs.getBoolean(KEY_REMEMBER_ME, false)
     }
     
     fun isActivated(): Boolean = prefs.getBoolean(KEY_ACTIVATED, false)

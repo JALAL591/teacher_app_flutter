@@ -137,8 +137,27 @@
                             android:layout_width="match_parent"
                             android:layout_height="220dp" />
 
+                        <!-- Video Thumbnail for broadcast lessons -->
+                        <ImageView
+                            android:id="@+id/videoThumbnail"
+                            android:layout_width="match_parent"
+                            android:layout_height="220dp"
+                            android:scaleType="centerCrop"
+                            android:visibility="gone" />
+
                         <ImageButton
                             android:id="@+id/playButton"
+                            android:layout_width="64dp"
+                            android:layout_height="64dp"
+                            android:layout_gravity="center"
+                            android:background="@drawable/rounded_purple_selector"
+                            android:src="@drawable/ic_play"
+                            android:visibility="gone"
+                            app:tint="@android:color/white" />
+
+                        <!-- Play Button for video thumbnail -->
+                        <ImageButton
+                            android:id="@+id/playVideoButton"
                             android:layout_width="64dp"
                             android:layout_height="64dp"
                             android:layout_gravity="center"
@@ -155,6 +174,22 @@
                             android:visibility="gone" />
                     </FrameLayout>
                 </androidx.cardview.widget.CardView>
+
+                <!-- Lesson Image Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/lessonImageCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:cardCornerRadius="12dp">
+
+                    <ImageView
+                        android:id="@+id/lessonImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:scaleType="centerCrop" />
+                </com.google.android.material.card.MaterialCardView>
 
                 <!-- Images Card (for broadcast lessons) -->
                 <androidx.cardview.widget.CardView
@@ -184,7 +219,7 @@
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/imagesRecycler"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                            android:layout_height="120dp"
                             android:layout_marginTop="12dp"
                             android:orientation="horizontal"
                             android:visibility="gone" />
@@ -203,15 +238,13 @@
                 </androidx.cardview.widget.CardView>
 
                 <!-- PDF Viewer Card -->
-                <androidx.cardview.widget.CardView
+                <com.google.android.material.card.MaterialCardView
                     android:id="@+id/pdfCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/dark_surface"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp">
+                    app:cardCornerRadius="12dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -254,11 +287,43 @@
                         <com.github.barteksc.pdfviewer.PDFView
                             android:id="@+id/pdfView"
                             android:layout_width="match_parent"
-                            android:layout_height="300dp"
+                            android:layout_height="400dp"
                             android:layout_marginTop="12dp"
                             android:visibility="gone" />
+
+                        <!-- PDF Page Navigation -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:padding="8dp"
+                            android:visibility="gone">
+
+                            <ImageButton
+                                android:id="@+id/pdfPrevPage"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/ic_arrow_right"
+                                app:tint="@color/indigo_400" />
+
+                            <TextView
+                                android:id="@+id/pdfPageIndicator"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="16dp"
+                                android:text="1/1"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp" />
+
+                            <ImageButton
+                                android:id="@+id/pdfNextPage"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/ic_arrow_left"
+                                app:tint="@color/indigo_400" />
+                        </LinearLayout>
                     </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                </com.google.android.material.card.MaterialCardView>
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"

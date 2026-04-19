@@ -13,6 +13,7 @@ import org.json.JSONObject
 import java.io.File
 import android.util.Base64
 import com.edu.teacher.TeacherServer.LessonAttachments
+import com.edu.teacher.ui.video.VideoPlayerActivity
 
 class LessonDetailsActivity : BaseActivity() {
 
@@ -68,8 +69,12 @@ class LessonDetailsActivity : BaseActivity() {
                 subjectId = intent.getStringExtra("subject_id") ?: ""
                 isPublished = lessonJson.optBoolean("isPublished", false)
                 pdfUri = lessonJson.optString("pdfUri", "").ifEmpty { null }
-                videoUri = lessonJson.optString("video", "").ifEmpty { null }
-                imageUri = lessonJson.optString("image", "").ifEmpty { null }
+                videoUri = lessonJson.optString("videoUri", "").ifEmpty { null }
+                imageUri = lessonJson.optString("imageUri", "").ifEmpty { null }
+
+                android.util.Log.e("LessonDetails", "parseIntentData - imageUri: $imageUri")
+                android.util.Log.e("LessonDetails", "parseIntentData - videoUri: $videoUri")
+                android.util.Log.e("LessonDetails", "parseIntentData - pdfUri: $pdfUri")
             } catch (e: Exception) {
                 e.printStackTrace()
                 Toast.makeText(this, R.string.error_loading_lesson, Toast.LENGTH_SHORT).show()
@@ -100,8 +105,12 @@ class LessonDetailsActivity : BaseActivity() {
             lessonUnit = lesson.optString("unit", "")
             isPublished = lesson.optBoolean("isPublished", false)
             pdfUri = lesson.optString("pdfUri", "").ifEmpty { null }
-            videoUri = lesson.optString("video", "").ifEmpty { null }
-            imageUri = lesson.optString("image", "").ifEmpty { null }
+            videoUri = lesson.optString("videoUri", "").ifEmpty { null }
+            imageUri = lesson.optString("imageUri", "").ifEmpty { null }
+
+            android.util.Log.e("LessonDetails", "loadLessonFromStorage - imageUri: $imageUri")
+            android.util.Log.e("LessonDetails", "loadLessonFromStorage - videoUri: $videoUri")
+            android.util.Log.e("LessonDetails", "loadLessonFromStorage - pdfUri: $pdfUri")
         } else {
             Toast.makeText(this, R.string.error_loading_lesson, Toast.LENGTH_SHORT).show()
             finish()
@@ -140,23 +149,27 @@ class LessonDetailsActivity : BaseActivity() {
             binding.lessonUnit.visibility = View.GONE
         }
 
-        updatePublishStatus()
-
         if (lessonContent.isNotEmpty()) {
             binding.lessonContent.text = lessonContent
-            binding.lessonContent.movementMethod = LinkMovementMethod.getInstance()
-            binding.emptyContentText.visibility = View.GONE
+            binding.lessonContent.visibility = View.VISIBLE
         } else {
             binding.lessonContent.visibility = View.GONE
-            binding.emptyContentText.visibility = View.VISIBLE
         }
 
-        binding.lessonEmoji.text = getLessonEmoji()
-        updateBroadcastButton()
+updatePublishStatus()
+        
         displayAttachments()
+        displayMedia()
     }
 
     private fun displayAttachments(lesson: org.json.JSONObject = lessonJson) {
+        android.util.Log.e("LessonDetails", "=== displayAttachments CALLED ===")
+        android.util.Log.e("LessonDetails", "imageUri: '$imageUri'")
+        android.util.Log.e("LessonDetails", "imageUri exists: ${imageUri?.let { java.io.File(it).exists() }}")
+        android.util.Log.e("LessonDetails", "videoUri: '$videoUri'")
+        android.util.Log.e("LessonDetails", "videoUri exists: ${videoUri?.let { java.io.File(it).exists() }}")
+        android.util.Log.e("LessonDetails", "pdfUri: '$pdfUri'")
+        
         var hasAttachments = false
 
         if (!pdfUri.isNullOrEmpty()) {
@@ -172,11 +185,22 @@ class LessonDetailsActivity : BaseActivity() {
             hasAttachments = true
             binding.attachmentsSection.visibility = View.VISIBLE
             binding.videoCard.visibility = View.VISIBLE
-            if (!videoUri!!.startsWith("http")) {
-                Glide.with(this)
-                    .load(Uri.parse(videoUri))
-                    .centerCrop()
-                    .into(binding.videoThumbnail)
+            
+            val currentVideoUri = videoUri
+            if (currentVideoUri!!.startsWith("/") && File(currentVideoUri).exists()) {
+                try {
+                    val thumbnail = android.media.ThumbnailUtils.createVideoThumbnail(
+                        currentVideoUri,
+                        android.provider.MediaStore.Video.Thumbnails.MINI_KIND
+                    )
+                    if (thumbnail != null) {
+                        binding.videoThumbnail.setImageBitmap(thumbnail)
+                    } else {
+                        binding.videoThumbnail.setImageResource(R.drawable.ic_play)
+                    }
+                } catch (e: Exception) {
+                    binding.videoThumbnail.setImageResource(R.drawable.ic_play)
+                }
             } else {
                 binding.videoThumbnail.setImageResource(R.drawable.ic_play)
             }
@@ -233,6 +257,46 @@ class LessonDetailsActivity : BaseActivity() {
     }
     
     private class ImageViewHolder(val imageView: android.widget.ImageView) : androidx.recyclerview.widget.RecyclerView.ViewHolder(imageView)
+
+    private fun displayMedia() {
+        try {
+        android.util.Log.e("LessonDetails", "=== displayMedia CALLED ===")
+        
+        val imagePath = lessonJson.optString("imageUri", "")
+        android.util.Log.e("LessonDetails", "displayMedia - imagePath: '$imagePath'")
+        android.util.Log.e("LessonDetails", "displayMedia - file exists: ${java.io.File(imagePath).exists()}")
+        
+        if (imagePath.isNotEmpty() && java.io.File(imagePath).exists()) {
+            android.util.Log.e("LessonDetails", "displayMedia - showing image")
+            binding.lessonImageCard?.visibility = View.VISIBLE
+            binding.lessonImage?.let { 
+                com.bumptech.glide.Glide.with(this).load(java.io.File(imagePath)).into(it)
+            }
+        } else {
+            android.util.Log.e("LessonDetails", "displayMedia - hiding image")
+            binding.lessonImageCard?.visibility = View.GONE
+        }
+        
+        val videoPath = lessonJson.optString("videoUri", "")
+        android.util.Log.e("LessonDetails", "displayMedia - videoPath: '$videoPath'")
+        android.util.Log.e("LessonDetails", "displayMedia - video file exists: ${java.io.File(videoPath).exists()}")
+        
+        if (videoPath.isNotEmpty() && java.io.File(videoPath).exists()) {
+            android.util.Log.e("LessonDetails", "displayMedia - showing video button")
+            binding.videoButton?.visibility = View.VISIBLE
+            binding.videoButton?.setOnClickListener {
+                val intent = android.content.Intent(this, com.edu.teacher.ui.video.VideoPlayerActivity::class.java)
+                intent.putExtra("video_path", videoPath)
+                startActivity(intent)
+            }
+        } else {
+            android.util.Log.e("LessonDetails", "displayMedia - hiding video button")
+            binding.videoButton?.visibility = View.GONE
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("LessonDetails", "Error in displayMedia: ${e.message}", e)
+    }
+}
 
     private fun loadPdf() {
         if (pdfUri.isNullOrEmpty()) return
@@ -332,8 +396,9 @@ class LessonDetailsActivity : BaseActivity() {
         }
         
         try {
+            val currentVideoUri = videoUri
             val videoPath = when {
-                videoUri!!.startsWith("/") -> videoUri
+                currentVideoUri!!.startsWith("/") -> currentVideoUri
                 else -> null
             }
             
@@ -343,7 +408,7 @@ class LessonDetailsActivity : BaseActivity() {
                 intent.putExtra(com.edu.teacher.ui.video.VideoPlayerActivity.EXTRA_VIDEO_TITLE, lessonTitle)
                 startActivity(intent)
             } else {
-                val uri = Uri.parse(videoUri)
+                val uri = Uri.parse(currentVideoUri)
                 val playIntent = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, "video/*")
                 }

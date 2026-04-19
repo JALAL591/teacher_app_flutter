@@ -24,6 +24,7 @@ import com.edu.student.domain.model.AnswerSubmission
 import com.edu.student.domain.model.Lesson
 import com.edu.student.domain.model.Question
 import com.edu.student.services.TeacherClient
+import com.edu.student.services.TeacherClient.SavedAttachments
 import com.edu.student.ui.common.ImageAdapter
 import com.edu.student.ui.common.QuestionAdapter
 import com.edu.student.ai.SmartAssistant
@@ -90,7 +91,70 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         extractIntentData()
         setupViews()
         loadBroadcastAttachments()
+        setupBroadcastListener()
+        displayAttachments()
         loadLessonData()
+    }
+    
+    private var broadcastListenerCleanup: (() -> Unit)? = null
+    
+    private fun setupBroadcastListener() {
+        broadcastListenerCleanup = teacherClient.on("lesson_broadcast") { data ->
+            try {
+                val map = data as? Map<*, *>
+                val lesson = map?.get("lesson") as? Lesson
+                val attachments = map?.get("attachments") as? SavedAttachments
+                
+                lesson?.let {
+                    Log.e(TAG, "lesson_broadcast received")
+                    Log.e(TAG, "Images: ${it.images?.size ?: 0}")
+                    Log.e(TAG, "PDF: ${it.pdfPath}")
+                    Log.e(TAG, "Video: ${it.videoPath}")
+                    
+                    runOnUiThread {
+                        updateLessonFromBroadcast(it, attachments)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error handling lesson_broadcast: ${e.message}")
+            }
+        }
+    }
+    
+    private fun updateLessonFromBroadcast(lesson: Lesson, attachments: SavedAttachments?) {
+        currentLesson = lesson
+        
+        if (attachments != null) {
+            if (attachments.images.isNotEmpty()) {
+                lessonImages = attachments.images
+            }
+            if (!attachments.pdfPath.isNullOrEmpty()) {
+                lessonPdfPath = attachments.pdfPath
+            }
+            if (!attachments.videoPath.isNullOrEmpty()) {
+                lessonVideoPath = attachments.videoPath
+            }
+        } else {
+            val images = lesson.images
+            if (!images.isNullOrEmpty()) {
+                lessonImages = images.filterNotNull()
+            }
+            val pdfPath = lesson.pdfPath
+            if (!pdfPath.isNullOrEmpty()) {
+                lessonPdfPath = pdfPath
+            }
+            val videoPath = lesson.videoPath
+            if (!videoPath.isNullOrEmpty()) {
+                lessonVideoPath = videoPath
+            }
+        }
+        
+        Log.e(TAG, "Updating lesson data:")
+        Log.e(TAG, "lessonImages: ${lessonImages.size}")
+        Log.e(TAG, "lessonPdfPath: $lessonPdfPath")
+        Log.e(TAG, "lessonVideoPath: $lessonVideoPath")
+        
+        displayAttachments()
     }
     
     override fun onDestroy() {
@@ -99,6 +163,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         teacherClient.setCallback(null)
         smartAssistant.cleanup()
         scope.cancel()
+        broadcastListenerCleanup?.invoke()
         super.onDestroy()
     }
     
@@ -294,13 +359,46 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     }
     
     private fun loadBroadcastAttachments() {
+        val attachments = teacherClient.getCurrentAttachments()
+        if (attachments != null) {
+            Log.e(TAG, "Loading broadcast attachments")
+            Log.e(TAG, "Images: ${attachments.images.size}")
+            Log.e(TAG, "PDF: ${attachments.pdfPath}")
+            Log.e(TAG, "Video: ${attachments.videoPath}")
+            
+            if (attachments.images.isNotEmpty()) {
+                lessonImages = attachments.images
+            }
+            if (attachments.pdfPath != null) {
+                lessonPdfPath = attachments.pdfPath
+            }
+            if (attachments.videoPath != null) {
+                lessonVideoPath = attachments.videoPath
+            }
+        }
     }
     
     private fun displayAttachments() {
         Log.d(TAG, "displayAttachments - images: ${lessonImages.size}, pdf: ${lessonPdfPath}, video: ${lessonVideoPath}")
         
+        // Show lesson image (single image)
         if (lessonImages.isNotEmpty()) {
-            Log.d(TAG, "Showing ${lessonImages.size} images")
+            val firstImage = lessonImages.first()
+            if (lessonImages.size == 1 && firstImage.contains("/")) {
+                Log.d(TAG, "Showing single lesson image")
+                binding.lessonImageCard.visibility = View.VISIBLE
+                try {
+                    binding.lessonImage.setImageURI(android.net.Uri.fromFile(File(firstImage)))
+                    binding.lessonImage.setOnClickListener { showFullScreenImage(firstImage) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading lesson image: ${e.message}")
+                }
+            }
+        }
+        
+        // Show images carousel (multiple images)
+        if (lessonImages.size > 1) {
+            Log.d(TAG, "Showing ${lessonImages.size} images in carousel")
             binding.imagesCard.visibility = View.VISIBLE
             binding.imagesRecycler.visibility = View.VISIBLE
             binding.imagesRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -309,21 +407,54 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             }
         }
         
+        // Show PDF viewer
         if (!lessonPdfPath.isNullOrEmpty()) {
             Log.d(TAG, "Showing PDF: $lessonPdfPath")
             binding.pdfCard.visibility = View.VISIBLE
             binding.openPdfButton.setOnClickListener {
-                openPdfViewer(lessonPdfPath!!)
+                lessonPdfPath?.let { openPdfViewer(it) }
             }
-            binding.pdfView.visibility = View.VISIBLE
         }
         
+        // Show video with thumbnail
         if (!lessonVideoPath.isNullOrEmpty()) {
             Log.d(TAG, "Showing video: $lessonVideoPath")
             binding.videoCard.visibility = View.VISIBLE
-            binding.openVideoButton.setOnClickListener {
-                openVideoPlayer(lessonVideoPath!!)
+            displayVideoWithThumbnail(lessonVideoPath!!)
+        }
+    }
+    
+    private fun displayVideoWithThumbnail(videoPath: String) {
+        try {
+            val file = File(videoPath)
+            if (!file.exists()) {
+                Log.w(TAG, "Video file not found: $videoPath")
+                return
             }
+            
+            // Try to create thumbnail
+            try {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(videoPath)
+                val bitmap = retriever.getFrameAtTime(1000000, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                retriever.release()
+                
+                if (bitmap != null) {
+                    binding.videoThumbnail.setImageBitmap(bitmap)
+                    binding.videoThumbnail.visibility = View.VISIBLE
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating thumbnail: ${e.message}")
+            }
+            
+            binding.playVideoButton.visibility = View.VISIBLE
+            binding.playVideoButton.setOnClickListener { openVideoPlayer(videoPath) }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error displaying video: ${e.message}")
+            binding.videoCard.visibility = View.VISIBLE
+            binding.openVideoButton.visibility = View.VISIBLE
+            binding.openVideoButton.setOnClickListener { openVideoPlayer(videoPath) }
         }
     }
     
@@ -345,6 +476,12 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     private fun displayLocalPdf(file: File) {
         try {
             binding.pdfView.visibility = View.VISIBLE
+            
+            // Show page navigation controls
+            binding.pdfPrevPage?.visibility = View.VISIBLE
+            binding.pdfNextPage?.visibility = View.VISIBLE
+            binding.pdfPageIndicator?.visibility = View.VISIBLE
+            
             binding.pdfView.fromFile(file)
                 .enableSwipe(true)
                 .swipeHorizontal(false)
@@ -357,7 +494,15 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                 .autoSpacing(false)
                 .pageFitPolicy(com.github.barteksc.pdfviewer.util.FitPolicy.WIDTH)
                 .defaultPage(0)
+                .onPageChange { page, _ ->
+                    binding.pdfPageIndicator?.text = "${page + 1}/${binding.pdfView.pageCount}"
+                }
                 .load()
+            
+            binding.pdfPageIndicator?.text = "1/${binding.pdfView.pageCount}"
+            
+            binding.pdfPrevPage?.setOnClickListener { prevPdfPage() }
+            binding.pdfNextPage?.setOnClickListener { nextPdfPage() }
             
             Log.d(TAG, "PDF loaded successfully: ${binding.pdfView.pageCount} pages")
         } catch (e: Exception) {
@@ -449,10 +594,30 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     }
     
     private fun loadLessonData() {
+        var lesson: com.edu.student.domain.model.Lesson? = null
+        
+        // Try to get lesson from repository (cached lessons)
         val lessons = repository.getSubjects()
             .find { it.id == subjectId }?.lessons ?: emptyList()
+        lesson = lessons.find { it.id == lessonId }
         
-        val lesson = lessons.find { it.id == lessonId }
+        // If not found, try to get from TeacherClient's cached lessons
+        if (lesson == null) {
+            try {
+                val prefs = com.edu.student.data.preferences.StudentPreferences(this)
+                val teacherId = prefs.getAssignedTeacherId() ?: ""
+                val cachedJson = prefs.getCachedLessons(teacherId)
+                if (cachedJson != null) {
+                    val type = object : com.google.gson.reflect.TypeToken<List<com.edu.student.domain.model.Lesson>>() {}.type
+                    val cachedLessons: List<com.edu.student.domain.model.Lesson> = com.google.gson.Gson().fromJson(cachedJson, type)
+                    lesson = cachedLessons.find { it.id == lessonId }
+                    Log.d(TAG, "Loaded lesson from SharedPreferences cache")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading lesson from cache: ${e.message}")
+            }
+        }
+        
         if (lesson != null) {
             currentLesson = lesson
             if (lessonContent.isEmpty()) {
@@ -466,17 +631,32 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             }
             questions = lesson.questions
             
-            if (lessonImages.isEmpty() && !lesson.images.isNullOrEmpty()) {
-                lessonImages = lesson.images!!
+            // Load media paths from cached lesson
+            if (lessonImages.isEmpty()) {
+                val images = lesson.images
+                if (!images.isNullOrEmpty()) {
+                    lessonImages = images.filterNotNull()
+                    Log.d(TAG, "Loaded images from cache: ${lessonImages.size}")
+                } else {
+                    val image = lesson.image
+                    if (!image.isNullOrEmpty()) {
+                        lessonImages = listOf(image)
+                    }
+                }
             }
-            if (lessonImages.isEmpty() && lesson.image != null && lesson.image.isNotEmpty()) {
-                lessonImages = listOf(lesson.image)
+            if (lessonPdfPath.isNullOrEmpty()) {
+                val pdfPath = lesson.pdfPath
+                if (!pdfPath.isNullOrEmpty()) {
+                    lessonPdfPath = pdfPath
+                    Log.d(TAG, "Loaded PDF from cache: $lessonPdfPath")
+                }
             }
-            if (lessonPdfPath.isNullOrEmpty() && !lesson.pdfPath.isNullOrEmpty()) {
-                lessonPdfPath = lesson.pdfPath
-            }
-            if (lessonVideoPath.isNullOrEmpty() && !lesson.videoPath.isNullOrEmpty()) {
-                lessonVideoPath = lesson.videoPath
+            if (lessonVideoPath.isNullOrEmpty()) {
+                val videoPath = lesson.videoPath
+                if (!videoPath.isNullOrEmpty()) {
+                    lessonVideoPath = videoPath
+                    Log.d(TAG, "Loaded video from cache: $lessonVideoPath")
+                }
             }
             
             displayAttachments()

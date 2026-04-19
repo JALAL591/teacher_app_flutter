@@ -12,6 +12,13 @@
     <!-- Hotspot/Tethering Permissions -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS" android:maxSdkVersion="28" />
     
+    <!-- Storage Permissions -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    
     <!-- Bluetooth Permissions (Android 12+) -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:usesPermissionFlags="neverForLocation" />

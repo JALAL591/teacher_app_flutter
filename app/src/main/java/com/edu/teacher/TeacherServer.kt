@@ -378,8 +378,10 @@ class TeacherServer(private val context: Context) {
                 Log.d(TAG, "========================================")
                 Log.d(TAG, "=== BROADCASTING LESSON WITH MEDIA ===")
                 Log.d(TAG, "========================================")
+                Log.d(TAG, "Lesson content: ${lesson.optString("content").take(100)}")
 
                 val lessonWithMedia = attachMediaToLesson(lesson)
+                Log.d(TAG, "LessonWithMedia content: ${lessonWithMedia.optString("content").take(100)}")
 
                 val message = JSONObject().apply {
                     put("action", "LESSON_BROADCAST")

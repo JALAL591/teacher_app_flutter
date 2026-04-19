@@ -75,12 +75,25 @@ class StudentApp : Application() {
         getTeacherClient(this)
         syncTheme()
         createNotificationChannel()
+        createMediaDirectories()
         
         GlobalScope.launch {
             ModelManager.copyModelsAsync(this@StudentApp) { model, progress ->
                 android.util.Log.d("StudentApp", "Copying $model: $progress%")
             }
             ModelManager.logModelsInfo(this@StudentApp)
+        }
+    }
+    
+    private fun createMediaDirectories() {
+        val directories = listOf("images", "videos", "pdfs", "lessons")
+        
+        directories.forEach { dir ->
+            val file = java.io.File(filesDir, dir)
+            if (!file.exists()) {
+                file.mkdirs()
+                android.util.Log.d("StudentApp", "Created $dir directory: ${file.absolutePath}")
+            }
         }
     }
     

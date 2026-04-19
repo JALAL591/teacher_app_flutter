@@ -27,6 +27,10 @@ class TeacherClient(private val context: Context) {
     companion object {
         private const val TAG = "TeacherClient"
         const val SERVER_PORT = 9999
+        private const val MAX_MESSAGE_SIZE = 10 * 1024 * 1024 // 10 MB
+        private const val MAX_IMAGE_SIZE = 5 * 1024 * 1024  // 5 MB
+        private const val MAX_VIDEO_SIZE = 20 * 1024 * 1024 // 20 MB
+        private const val MAX_PDF_SIZE = 10 * 1024 * 1024   // 10 MB
     }
 
     data class SavedAttachments(
@@ -365,6 +369,11 @@ class TeacherClient(private val context: Context) {
             val trimmedData = data.trim()
             if (trimmedData.isEmpty()) return
             
+            Log.d(TAG, "Received data length: ${trimmedData.length} chars")
+            if (trimmedData.length > MAX_MESSAGE_SIZE) {
+                Log.w(TAG, "LARGE MESSAGE: ${trimmedData.length / 1024} KB - possible crash risk")
+            }
+            
             val json = JSONObject(trimmedData)
             
             if (json.has("id") && json.has("title") && json.has("questions")) {
@@ -413,6 +422,8 @@ class TeacherClient(private val context: Context) {
                     Log.d(TAG, "Pong received")
                 }
             }
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "OUT OF MEMORY - Message too large to parse!")
         } catch (e: Exception) {
             if (isRunning) Log.e(TAG, "Error parsing message: ${e.message}")
         }
@@ -429,6 +440,7 @@ class TeacherClient(private val context: Context) {
             
             Log.d(TAG, "=== PROCESSING DIRECT LESSON ===")
             Log.d(TAG, "Lesson title: ${lessonJson.optString("title")}")
+            Log.d(TAG, "Lesson content: ${lessonJson.optString("content", "").take(100)}")
             Log.d(TAG, "imageData present: ${lessonJson.optString("imageData", "").isNotEmpty()}")
             Log.d(TAG, "videoData present: ${lessonJson.optString("videoData", "").isNotEmpty()}")
             Log.d(TAG, "pdfData present: ${lessonJson.optString("pdfData", "").isNotEmpty()}")
@@ -467,6 +479,8 @@ class TeacherClient(private val context: Context) {
             Log.d(TAG, "videoPath: ${lesson.videoPath ?: "null"}")
             Log.d(TAG, "image: ${lesson.image ?: "null"}")
             processLesson(lesson, attachments)
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "OUT OF MEMORY processing lesson - media too large")
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing direct lesson: ${e.message}")
         }
@@ -547,11 +561,19 @@ class TeacherClient(private val context: Context) {
 
     private fun saveBase64Image(base64: String): String? {
         return try {
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            if (base64.length > MAX_IMAGE_SIZE * 2) {
+                Log.e(TAG, "Image too large: ${base64.length / 1024} KB")
+                return null
+            }
+            Log.d(TAG, "Saving image: ${base64.length / 1024} KB")
+            val bytes = Base64.decode(base64, Base64.NO_WRAP)
             val file = File(context.filesDir, "images/img_${System.currentTimeMillis()}.jpg")
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { it.write(bytes) }
             file.absolutePath
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "OUT OF MEMORY saving image - too large")
+            null
         } catch (e: Exception) {
             Log.e(TAG, "Error saving image: ${e.message}")
             null
@@ -560,13 +582,21 @@ class TeacherClient(private val context: Context) {
 
     private fun saveBase64Pdf(base64: String, fileName: String): String? {
         return try {
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            if (base64.length > MAX_PDF_SIZE * 2) {
+                Log.e(TAG, "PDF too large: ${base64.length / 1024} KB")
+                return null
+            }
+            Log.d(TAG, "Saving PDF: ${base64.length / 1024} KB")
+            val bytes = Base64.decode(base64, Base64.NO_WRAP)
             val timestamp = System.currentTimeMillis()
             val safeFileName = fileName.replace(" ", "_")
             val file = File(context.filesDir, "pdfs/${safeFileName}_$timestamp.pdf")
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { it.write(bytes) }
             file.absolutePath
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "OUT OF MEMORY saving PDF - too large")
+            null
         } catch (e: Exception) {
             Log.e(TAG, "Error saving PDF: ${e.message}")
             null
@@ -575,13 +605,21 @@ class TeacherClient(private val context: Context) {
 
     private fun saveBase64Video(base64: String, fileName: String): String? {
         return try {
-            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            if (base64.length > MAX_VIDEO_SIZE * 2) {
+                Log.e(TAG, "Video too large: ${base64.length / 1024} KB")
+                return null
+            }
+            Log.d(TAG, "Saving video: ${base64.length / 1024} KB")
+            val bytes = Base64.decode(base64, Base64.NO_WRAP)
             val timestamp = System.currentTimeMillis()
             val safeFileName = fileName.replace(" ", "_")
             val file = File(context.filesDir, "videos/${safeFileName}_$timestamp.mp4")
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { it.write(bytes) }
             file.absolutePath
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "OUT OF MEMORY saving video - too large")
+            null
         } catch (e: Exception) {
             Log.e(TAG, "Error saving video: ${e.message}")
             null
@@ -646,10 +684,15 @@ class TeacherClient(private val context: Context) {
                 } catch (e: Exception) { mutableListOf() }
             } else { mutableListOf() }
             
-            if (lessons.none { it.id == lesson.id }) {
+            val existingIndex = lessons.indexOfFirst { it.id == lesson.id }
+            if (existingIndex >= 0) {
+                lessons[existingIndex] = lesson
+                Log.d(TAG, "Updating existing lesson with attachments")
+            } else {
                 lessons.add(0, lesson)
-                prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
             }
+            prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
+            Log.d(TAG, "Lesson saved to cache - images: ${lesson.images?.size}, pdfPath: ${lesson.pdfPath}, videoPath: ${lesson.videoPath}")
             
             if (isRunning) {
                 safeEmitCallback { callback?.onLessonsReceived(listOf(lesson)) }
