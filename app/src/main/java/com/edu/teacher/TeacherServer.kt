@@ -1,8 +1,10 @@
 package com.edu.teacher
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import com.edu.teacher.network.TeacherBeacon
+import java.io.File
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -353,7 +355,10 @@ class TeacherServer(private val context: Context) {
     private fun sendLessons(writer: PrintWriter, lessons: List<JSONObject>) {
         try {
             val lessonsArray = JSONArray()
-            lessons.forEach { lessonsArray.put(it) }
+            lessons.forEach { lesson ->
+                val lessonWithMedia = attachMediaToLesson(lesson)
+                lessonsArray.put(lessonWithMedia)
+            }
             
             val response = JSONObject().apply {
                 put("action", "LESSONS_DATA")
@@ -361,7 +366,7 @@ class TeacherServer(private val context: Context) {
             }
             
             safeSendToClient(writer, response.toString())
-            Log.d(TAG, "Sent ${lessons.size} lessons")
+            Log.d(TAG, "Sent ${lessons.size} lessons with media")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending lessons", e)
         }
@@ -370,9 +375,15 @@ class TeacherServer(private val context: Context) {
     fun broadcastLesson(lesson: JSONObject, attachments: LessonAttachments? = null) {
         scope.launch(Dispatchers.IO) {
             try {
+                Log.d(TAG, "========================================")
+                Log.d(TAG, "=== BROADCASTING LESSON WITH MEDIA ===")
+                Log.d(TAG, "========================================")
+
+                val lessonWithMedia = attachMediaToLesson(lesson)
+
                 val message = JSONObject().apply {
                     put("action", "LESSON_BROADCAST")
-                    put("lesson", lesson)
+                    put("lesson", lessonWithMedia)
                     
                     attachments?.let { att ->
                         val attachmentsArray = JSONArray()
@@ -405,19 +416,120 @@ class TeacherServer(private val context: Context) {
                 }
                 
                 val messageStr = message.toString()
+                Log.d(TAG, "Message size: ${messageStr.length / 1024} KB")
                 
-                connectedClients.forEach { writer ->
-                    try {
-                        writer.println(messageStr)
-                    } catch (e: Exception) {
-                        connectedClients.remove(writer)
+                val disconnectedWriters = mutableListOf<PrintWriter>()
+                synchronized(connectedClients) {
+                    connectedClients.forEach { writer ->
+                        if (!safeSendToClient(writer, messageStr)) {
+                            disconnectedWriters.add(writer)
+                        } else {
+                            Log.d(TAG, "Lesson sent successfully to client")
+                        }
                     }
                 }
+                disconnectedWriters.forEach { removeDisconnectedClient(it) }
                 
-                Log.d(TAG, "Broadcasted lesson to ${connectedClients.size} clients")
+                Log.d(TAG, "Broadcast complete to ${connectedClients.size} clients")
             } catch (e: Exception) {
-                Log.e(TAG, "Error broadcasting lesson", e)
+                Log.e(TAG, "Error in broadcastLesson: ${e.message}", e)
             }
+        }
+    }
+    
+    private fun attachMediaToLesson(lesson: JSONObject): JSONObject {
+        val result = JSONObject(lesson.toString())
+        
+        val imagePath = lesson.optString("imagePath", "")
+            .ifEmpty { lesson.optString("selectedImagePath", "") }
+            .ifEmpty { lesson.optString("imageUri", "") }
+            .ifEmpty { lesson.optString("image", "") }
+        
+        if (imagePath.isNotEmpty()) {
+            Log.d(TAG, "Processing image: $imagePath")
+            val base64 = fileToBase64(imagePath)
+            if (base64 != null) {
+                result.put("imageData", base64)
+                result.put("imageType", getMimeType(imagePath))
+                Log.d(TAG, "Image attached: ${base64.length / 1024} KB")
+            } else {
+                Log.w(TAG, "Failed to read image: $imagePath")
+            }
+        }
+        
+        val videoPath = lesson.optString("videoPath", "")
+            .ifEmpty { lesson.optString("selectedVideoPath", "") }
+            .ifEmpty { lesson.optString("videoUri", "") }
+            .ifEmpty { lesson.optString("video", "") }
+        
+        if (videoPath.isNotEmpty()) {
+            Log.d(TAG, "Processing video: $videoPath")
+            val base64 = fileToBase64(videoPath)
+            if (base64 != null) {
+                result.put("videoData", base64)
+                result.put("videoType", getMimeType(videoPath))
+                Log.d(TAG, "Video attached: ${base64.length / 1024} KB")
+            } else {
+                Log.w(TAG, "Failed to read video: $videoPath")
+            }
+        }
+        
+        val pdfPath = lesson.optString("pdfPath", "")
+            .ifEmpty { lesson.optString("selectedPdfPath", "") }
+            .ifEmpty { lesson.optString("pdfUri", "") }
+            .ifEmpty { lesson.optString("pdf", "") }
+        
+        if (pdfPath.isNotEmpty()) {
+            Log.d(TAG, "Processing PDF: $pdfPath")
+            val base64 = fileToBase64(pdfPath)
+            if (base64 != null) {
+                result.put("pdfData", base64)
+                Log.d(TAG, "PDF attached: ${base64.length / 1024} KB")
+            } else {
+                Log.w(TAG, "Failed to read PDF: $pdfPath")
+            }
+        }
+        
+        return result
+    }
+    
+    private fun fileToBase64(path: String): String? {
+        return try {
+            val file = File(path)
+            
+            val actualFile = when {
+                file.exists() -> file
+                !path.startsWith("/") -> File(context.filesDir, path)
+                else -> null
+            }
+            
+            if (actualFile == null || !actualFile.exists()) {
+                Log.w(TAG, "File not found: $path")
+                return null
+            }
+            
+            if (actualFile.length() > 50 * 1024 * 1024) {
+                Log.w(TAG, "File too large: ${actualFile.length() / 1024 / 1024} MB")
+                return null
+            }
+            
+            val bytes = actualFile.readBytes()
+            Base64.encodeToString(bytes, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting file to Base64: ${e.message}")
+            null
+        }
+    }
+    
+    private fun getMimeType(path: String): String {
+        return when {
+            path.endsWith(".jpg", true) || path.endsWith(".jpeg", true) -> "image/jpeg"
+            path.endsWith(".png", true) -> "image/png"
+            path.endsWith(".webp", true) -> "image/webp"
+            path.endsWith(".mp4", true) -> "video/mp4"
+            path.endsWith(".mkv", true) -> "video/mkv"
+            path.endsWith(".pdf", true) -> "application/pdf"
+            else -> "application/octet-stream"
         }
     }
     

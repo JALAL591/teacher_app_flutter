@@ -85,6 +85,12 @@
         <activity android:name=".StudentsActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
         <activity android:name=".SettingsActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
         <activity android:name=".LessonDetailsActivity" android:exported="false" android:configChanges="uiMode|screenSize|orientation" />
+        <activity 
+            android:name=".ui.video.VideoPlayerActivity" 
+            android:exported="false" 
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <!-- Teacher Stats Activities -->
         <activity

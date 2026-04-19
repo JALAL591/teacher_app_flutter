@@ -387,8 +387,13 @@ class TeacherClient(private val context: Context) {
                     val lessonJson = json.optJSONObject("lesson")
                     val attachmentsArray = json.optJSONArray("attachments")
                     
+                    Log.d(TAG, "=== LESSON_BROADCAST RECEIVED ===")
+                    Log.d(TAG, "Lesson JSON: ${lessonJson?.toString()?.take(200)}...")
+                    
                     val savedAttachments = saveAttachments(attachmentsArray)
                     currentAttachments = savedAttachments
+                    
+                    Log.d(TAG, "Attachments from array - images: ${savedAttachments.images.size}, pdf: ${savedAttachments.pdfPath}, video: ${savedAttachments.videoPath}")
                     
                     lessonJson?.let { processDirectLesson(it, savedAttachments) }
                 }
@@ -422,6 +427,20 @@ class TeacherClient(private val context: Context) {
             
             val lessonJson = JSONObject(json.toString())
             
+            Log.d(TAG, "=== PROCESSING DIRECT LESSON ===")
+            Log.d(TAG, "Lesson title: ${lessonJson.optString("title")}")
+            Log.d(TAG, "imageData present: ${lessonJson.optString("imageData", "").isNotEmpty()}")
+            Log.d(TAG, "videoData present: ${lessonJson.optString("videoData", "").isNotEmpty()}")
+            Log.d(TAG, "pdfData present: ${lessonJson.optString("pdfData", "").isNotEmpty()}")
+            
+            saveMediaFromLesson(lessonJson)
+            
+            Log.d(TAG, "After saveMediaFromLesson:")
+            Log.d(TAG, "  imagePath: ${lessonJson.optString("imagePath", "NOT SET")}")
+            Log.d(TAG, "  videoPath: ${lessonJson.optString("videoPath", "NOT SET")}")
+            Log.d(TAG, "  pdfPath: ${lessonJson.optString("pdfPath", "NOT SET")}")
+            Log.d(TAG, "  localImagePath: ${lessonJson.optString("localImagePath", "NOT SET")}")
+            
             attachments?.let { att ->
                 Log.d(TAG, "Processing attachments - images: ${att.images.size}, pdf: ${att.pdfPath}, video: ${att.videoPath}")
                 if (att.images.isNotEmpty()) {
@@ -441,10 +460,53 @@ class TeacherClient(private val context: Context) {
             }
             
             val lesson = gson.fromJson(lessonJson.toString(), com.edu.student.domain.model.Lesson::class.java)
-            Log.d(TAG, "Parsed lesson: ${lesson.title}, images: ${lesson.images?.size}, pdf: ${lesson.pdfPath}, video: ${lesson.videoPath}")
+            Log.d(TAG, "=== PARSED LESSON ===")
+            Log.d(TAG, "Title: ${lesson.title}")
+            Log.d(TAG, "images: ${lesson.images?.size ?: 0} items")
+            Log.d(TAG, "pdfPath: ${lesson.pdfPath ?: "null"}")
+            Log.d(TAG, "videoPath: ${lesson.videoPath ?: "null"}")
+            Log.d(TAG, "image: ${lesson.image ?: "null"}")
             processLesson(lesson, attachments)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing direct lesson: ${e.message}")
+        }
+    }
+    
+    private fun saveMediaFromLesson(lesson: JSONObject) {
+        val imageData = lesson.optString("imageData", "")
+        if (imageData.isNotEmpty()) {
+            Log.d(TAG, "Saving received image...")
+            val path = saveBase64Image(imageData)
+            if (path != null) {
+                lesson.put("localImagePath", path)
+                lesson.put("image", path)
+                val imagesArray = JSONArray()
+                imagesArray.put(path)
+                lesson.put("images", imagesArray)
+                Log.d(TAG, "Image saved: $path")
+            }
+        }
+        
+        val videoData = lesson.optString("videoData", "")
+        if (videoData.isNotEmpty()) {
+            Log.d(TAG, "Saving received video...")
+            val path = saveBase64Video(videoData, "video_${lesson.optString("id", System.currentTimeMillis().toString())}.mp4")
+            if (path != null) {
+                lesson.put("localVideoPath", path)
+                lesson.put("videoPath", path)
+                Log.d(TAG, "Video saved: $path")
+            }
+        }
+        
+        val pdfData = lesson.optString("pdfData", "")
+        if (pdfData.isNotEmpty()) {
+            Log.d(TAG, "Saving received PDF...")
+            val path = saveBase64Pdf(pdfData, "pdf_${lesson.optString("id", System.currentTimeMillis().toString())}.pdf")
+            if (path != null) {
+                lesson.put("localPdfPath", path)
+                lesson.put("pdfPath", path)
+                Log.d(TAG, "PDF saved: $path")
+            }
         }
     }
 
@@ -531,13 +593,13 @@ class TeacherClient(private val context: Context) {
     private suspend fun processLessonsArray(lessonsJson: JSONArray) {
         try {
             val teacherId = prefs.getAssignedTeacherId() ?: ""
-            prefs.saveCachedLessons(teacherId, lessonsJson.toString())
             
             val lessons = mutableListOf<com.edu.student.domain.model.Lesson>()
             for (i in 0 until lessonsJson.length()) {
                 try {
-                    val lessonJson = lessonsJson.getJSONObject(i)
+                    val lessonJson = JSONObject(lessonsJson.getJSONObject(i).toString())
                     if (isLessonForThisStudent(lessonJson)) {
+                        saveMediaFromLesson(lessonJson)
                         val lesson = gson.fromJson(lessonJson.toString(), com.edu.student.domain.model.Lesson::class.java)
                         lessons.add(lesson)
                     }
@@ -547,6 +609,7 @@ class TeacherClient(private val context: Context) {
             }
             
             if (lessons.isNotEmpty() && isRunning) {
+                prefs.saveCachedLessons(teacherId, lessonsJson.toString())
                 Log.d(TAG, "Received ${lessons.size} filtered lessons")
                 safeEmitCallback { callback?.onLessonsReceived(lessons) }
                 safeEmit("lessons_updated", lessons)

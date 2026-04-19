@@ -315,6 +315,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             binding.openPdfButton.setOnClickListener {
                 openPdfViewer(lessonPdfPath!!)
             }
+            binding.pdfView.visibility = View.VISIBLE
         }
         
         if (!lessonVideoPath.isNullOrEmpty()) {
@@ -334,6 +335,55 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                 return
             }
             
+            displayLocalPdf(file)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error opening PDF: ${e.message}")
+            tryExternalPdfViewer(pdfPath)
+        }
+    }
+    
+    private fun displayLocalPdf(file: File) {
+        try {
+            binding.pdfView.visibility = View.VISIBLE
+            binding.pdfView.fromFile(file)
+                .enableSwipe(true)
+                .swipeHorizontal(false)
+                .enableDoubletap(true)
+                .enableAnnotationRendering(false)
+                .password(null)
+                .scrollHandle(null)
+                .enableAntialiasing(true)
+                .spacing(10)
+                .autoSpacing(false)
+                .pageFitPolicy(com.github.barteksc.pdfviewer.util.FitPolicy.WIDTH)
+                .defaultPage(0)
+                .load()
+            
+            Log.d(TAG, "PDF loaded successfully: ${binding.pdfView.pageCount} pages")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error displaying local PDF: ${e.message}")
+            tryExternalPdfViewer(file.absolutePath)
+        }
+    }
+    
+    private fun prevPdfPage() {
+        val currentPage = binding.pdfView.currentPage
+        if (currentPage > 0) {
+            binding.pdfView.jumpTo(currentPage - 1)
+        }
+    }
+    
+    private fun nextPdfPage() {
+        val totalPages = binding.pdfView.pageCount
+        val currentPage = binding.pdfView.currentPage
+        if (currentPage < totalPages - 1) {
+            binding.pdfView.jumpTo(currentPage + 1)
+        }
+    }
+    
+    private fun tryExternalPdfViewer(pdfPath: String) {
+        try {
+            val file = File(pdfPath)
             val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/pdf")
@@ -358,19 +408,27 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                 return
             }
             
-            val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "video/*")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
-            } else {
-                Toast.makeText(this, "لا يوجد تطبيق لتشغيل الفيديو", Toast.LENGTH_LONG).show()
-            }
+            val intent = Intent(this, com.edu.student.ui.video.VideoPlayerActivity::class.java)
+            intent.putExtra(com.edu.student.ui.video.VideoPlayerActivity.EXTRA_VIDEO_PATH, videoPath)
+            intent.putExtra(com.edu.student.ui.video.VideoPlayerActivity.EXTRA_VIDEO_TITLE, lessonTitle)
+            startActivity(intent)
         } catch (e: Exception) {
-            Toast.makeText(this, "خطأ في تشغيل الفيديو: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Error playing video: ${e.message}")
+            try {
+                val uri = FileProvider.getUriForFile(this, "${packageName}.provider", File(videoPath))
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "video/*")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                
+                if (intent.resolveActivity(packageManager) != null) {
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this, "لا يوجد تطبيق لتشغيل الفيديو", Toast.LENGTH_LONG).show()
+                }
+            } catch (e2: Exception) {
+                Toast.makeText(this, "خطأ في تشغيل الفيديو: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     
@@ -410,6 +468,9 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             
             if (lessonImages.isEmpty() && !lesson.images.isNullOrEmpty()) {
                 lessonImages = lesson.images!!
+            }
+            if (lessonImages.isEmpty() && lesson.image != null && lesson.image.isNotEmpty()) {
+                lessonImages = listOf(lesson.image)
             }
             if (lessonPdfPath.isNullOrEmpty() && !lesson.pdfPath.isNullOrEmpty()) {
                 lessonPdfPath = lesson.pdfPath

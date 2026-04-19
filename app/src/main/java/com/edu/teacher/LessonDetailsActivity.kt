@@ -156,7 +156,7 @@ class LessonDetailsActivity : BaseActivity() {
         displayAttachments()
     }
 
-    private fun displayAttachments() {
+    private fun displayAttachments(lesson: org.json.JSONObject = lessonJson) {
         var hasAttachments = false
 
         if (!pdfUri.isNullOrEmpty()) {
@@ -188,6 +188,41 @@ class LessonDetailsActivity : BaseActivity() {
             hasAttachments = true
             binding.attachmentsSection.visibility = View.VISIBLE
             binding.imagesCard.visibility = View.VISIBLE
+            
+            val imageList = mutableListOf<String>()
+            val currentImageUri = imageUri
+            if (currentImageUri != null) {
+                if (!currentImageUri.startsWith("http")) {
+                    val imageFile = File(currentImageUri)
+                    if (imageFile.exists()) {
+                        imageList.add(currentImageUri)
+                    }
+                } else {
+                    imageList.add(currentImageUri)
+                }
+            }
+            
+            if (imageList.isNotEmpty()) {
+                binding.imagesRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(
+                    this, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
+                binding.imagesRecyclerView.adapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<ImageViewHolder>() {
+                    override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ImageViewHolder {
+                        val imageView = android.widget.ImageView(parent.context)
+                        imageView.layoutParams = android.view.ViewGroup.LayoutParams(300, 300)
+                        imageView.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+                        return ImageViewHolder(imageView)
+                    }
+                    override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
+                        val imagePath = imageList[position]
+                        if (!imagePath.startsWith("http")) {
+                            Glide.with(this@LessonDetailsActivity).load(File(imagePath)).into(holder.imageView)
+                        } else {
+                            Glide.with(this@LessonDetailsActivity).load(Uri.parse(imagePath)).into(holder.imageView)
+                        }
+                    }
+                    override fun getItemCount() = imageList.size
+                }
+            }
         } else {
             binding.imagesCard.visibility = View.GONE
         }
@@ -196,6 +231,8 @@ class LessonDetailsActivity : BaseActivity() {
             binding.attachmentsSection.visibility = View.GONE
         }
     }
+    
+    private class ImageViewHolder(val imageView: android.widget.ImageView) : androidx.recyclerview.widget.RecyclerView.ViewHolder(imageView)
 
     private fun loadPdf() {
         if (pdfUri.isNullOrEmpty()) return
@@ -286,20 +323,32 @@ class LessonDetailsActivity : BaseActivity() {
         val currentPage = binding.pdfView.currentPage + 1
         val totalPages = binding.pdfView.pageCount
         binding.pdfPageIndicator.text = "$currentPage/$totalPages"
-    }
+}
 
     private fun playVideo() {
         if (videoUri.isNullOrEmpty()) {
             Toast.makeText(this, R.string.msg_no_video, Toast.LENGTH_SHORT).show()
             return
         }
-
+        
         try {
-            val uri = Uri.parse(videoUri)
-            val playIntent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "video/*")
+            val videoPath = when {
+                videoUri!!.startsWith("/") -> videoUri
+                else -> null
             }
-            startActivity(Intent.createChooser(playIntent, getString(R.string.btn_play)))
+            
+            if (videoPath != null && File(videoPath).exists()) {
+                val intent = Intent(this, com.edu.teacher.ui.video.VideoPlayerActivity::class.java)
+                intent.putExtra(com.edu.teacher.ui.video.VideoPlayerActivity.EXTRA_VIDEO_PATH, videoPath)
+                intent.putExtra(com.edu.teacher.ui.video.VideoPlayerActivity.EXTRA_VIDEO_TITLE, lessonTitle)
+                startActivity(intent)
+            } else {
+                val uri = Uri.parse(videoUri)
+                val playIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "video/*")
+                }
+                startActivity(Intent.createChooser(playIntent, getString(R.string.btn_play)))
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, R.string.error_loading_video, Toast.LENGTH_SHORT).show()

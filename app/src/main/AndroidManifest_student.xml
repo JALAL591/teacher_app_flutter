@@ -30,6 +30,12 @@
         <activity android:name=".ui.dashboard.DashboardActivity" android:exported="false" />
         <activity android:name=".ui.subject.SubjectActivity" android:exported="false" />
         <activity android:name=".ui.lesson.LessonActivity" android:exported="false" />
+        <activity 
+            android:name=".ui.video.VideoPlayerActivity" 
+            android:exported="false" 
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
         <activity android:name=".ui.stats.StatsActivity" android:exported="false" />
         <activity android:name=".ui.sync.SyncActivity" android:exported="false" />
 
