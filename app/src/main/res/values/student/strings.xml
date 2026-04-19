@@ -14,16 +14,16 @@
     <string name="subjects">المواد</string>
     <string name="connection_searching">○ جاري البحث عن رادار المعلم...</string>
     <string name="connection_connected">● متصل برادار المعلم</string>
-    <string name="reading_complete">أنهيت القراءة +10 🌟</string>
-    <string name="points_added">+%d نجوم! 🌟</string>
-    <string name="submit_homework">إرسال الواجب للمعلم 📤</string>
+    <string name="reading_complete">أنهيت القراءة +10</string>
+    <string name="points_added">+%d نجوم!</string>
+    <string name="submit_homework">إرسال الواجب للمعلم</string>
     <string name="sending">جاري الإرسال...</string>
-    <string name="homework_sent">✅ تم إرسال الواجب بنجاح!</string>
-    <string name="homework_failed">❌ فشل الإرسال</string>
-    <string name="capture_homework">📷 التقاط صورة الحل</string>
+    <string name="homework_sent">تم إرسال الواجب بنجاح!</string>
+    <string name="homework_failed">فشل الإرسال</string>
+    <string name="capture_homework">التقاط صورة الحل</string>
     <string name="lesson_content">محتوى الدرس</string>
-    <string name="homework_tab">📝 الواجب</string>
-    <string name="content_tab">📖 الشرح</string>
+    <string name="homework_tab">الواجب</string>
+    <string name="content_tab">الشرح</string>
     <string name="no_lessons">لا توجد دروس منشورة في هذه المادة بعد</string>
     <string name="no_subjects">لا توجد مواد متاحة حالياً</string>
 </resources>

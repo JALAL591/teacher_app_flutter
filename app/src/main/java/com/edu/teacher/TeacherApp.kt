@@ -3,7 +3,10 @@ package com.edu.teacher
 import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import com.edu.common.ModelManager
 import com.edu.teacher.utils.ThemeManager
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class TeacherApp : Application() {
     
@@ -55,5 +58,12 @@ class TeacherApp : Application() {
         super.onCreate()
         _instance = this
         syncTheme()
+        
+        GlobalScope.launch {
+            ModelManager.copyModelsAsync(this@TeacherApp) { model, progress ->
+                android.util.Log.d("TeacherApp", "Copying $model: $progress%")
+            }
+            ModelManager.logModelsInfo(this@TeacherApp)
+        }
     }
 }

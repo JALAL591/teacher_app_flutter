@@ -64,11 +64,17 @@
 
             <ImageButton
                 android:id="@+id/addLessonButton"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:minWidth="56dp"
+                android:minHeight="56dp"
                 android:background="@drawable/bg_fab_modern"
                 android:src="@drawable/ic_add_lesson"
-                android:padding="12dp"
+                android:padding="14dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:elevation="8dp"
+                android:translationZ="4dp"
                 android:contentDescription="@string/btn_add_lesson"
                 app:tint="?attr/colorOnSurface" />
 

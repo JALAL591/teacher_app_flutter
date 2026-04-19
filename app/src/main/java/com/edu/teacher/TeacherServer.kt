@@ -20,6 +20,14 @@ class TeacherServer(private val context: Context) {
         private const val TAG = "TeacherServer"
         const val SERVER_PORT = 9999
     }
+
+    data class LessonAttachments(
+        val images: List<String> = emptyList(),
+        val pdfData: String? = null,
+        val pdfFileName: String? = null,
+        val videoData: String? = null,
+        val videoFileName: String? = null
+    )
     
     private val beacon = TeacherBeacon(context)
     private var serverSocket: ServerSocket? = null
@@ -359,12 +367,41 @@ class TeacherServer(private val context: Context) {
         }
     }
     
-    fun broadcastLesson(lesson: JSONObject) {
+    fun broadcastLesson(lesson: JSONObject, attachments: LessonAttachments? = null) {
         scope.launch(Dispatchers.IO) {
             try {
                 val message = JSONObject().apply {
                     put("action", "LESSON_BROADCAST")
                     put("lesson", lesson)
+                    
+                    attachments?.let { att ->
+                        val attachmentsArray = JSONArray()
+                        
+                        att.images.forEach { imageBase64 ->
+                            attachmentsArray.put(JSONObject().apply {
+                                put("type", "image")
+                                put("data", imageBase64)
+                            })
+                        }
+                        
+                        att.pdfData?.let { pdfBase64 ->
+                            attachmentsArray.put(JSONObject().apply {
+                                put("type", "pdf")
+                                put("fileName", att.pdfFileName ?: "document.pdf")
+                                put("data", pdfBase64)
+                            })
+                        }
+                        
+                        att.videoData?.let { videoBase64 ->
+                            attachmentsArray.put(JSONObject().apply {
+                                put("type", "video")
+                                put("fileName", att.videoFileName ?: "video.mp4")
+                                put("data", videoBase64)
+                            })
+                        }
+                        
+                        put("attachments", attachmentsArray)
+                    }
                 }
                 
                 val messageStr = message.toString()

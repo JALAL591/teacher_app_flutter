@@ -80,7 +80,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:layout_marginTop="40dp"
-                        android:text="📖"
+                        android:text="📚"
                         android:textSize="48sp" />
 
                     <TextView

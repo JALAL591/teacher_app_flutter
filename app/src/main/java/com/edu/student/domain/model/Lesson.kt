@@ -17,7 +17,10 @@ data class Lesson(
     val section: String = "",
     val questions: List<Question> = emptyList(),
     val isPublished: Boolean = true,
-    val createdAt: String = ""
+    val createdAt: String = "",
+    val images: List<String>? = null,
+    val pdfPath: String? = null,
+    val videoPath: String? = null
 )
 
 data class HomeworkSubmission(

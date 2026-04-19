@@ -4,8 +4,10 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.app.Dialog
 import android.speech.tts.TextToSpeech
 import android.util.Base64
+import android.util.Log
 import android.view.View
 import android.widget.MediaController
 import android.widget.Toast
@@ -15,13 +17,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.databinding.*
+import com.edu.teacher.R
 import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.AnswerSubmission
 import com.edu.student.domain.model.Lesson
 import com.edu.student.domain.model.Question
 import com.edu.student.services.TeacherClient
+import com.edu.student.ui.common.ImageAdapter
 import com.edu.student.ui.common.QuestionAdapter
+import com.edu.student.ai.SmartAssistant
+import com.edu.student.ui.assistant.SmartAssistantBottomSheet
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -30,6 +37,8 @@ import java.net.URL
 import java.util.*
 
 class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, TeacherClient.ClientCallback {
+    
+    private val TAG = "LessonActivity"
     
     private lateinit var binding: StudentActivityLessonBinding
     private lateinit var repository: StudentRepository
@@ -57,6 +66,12 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     private var questionAnswers = mutableMapOf<String, String>()
     private var textAnswers = mutableMapOf<String, String>()
     private var imageAnswers = mutableMapOf<String, String>()
+    private var lessonImages: List<String> = emptyList()
+    private var lessonPdfPath: String? = null
+    private var lessonVideoPath: String? = null
+    private var isBroadcastLesson = false
+    private lateinit var smartAssistant: SmartAssistant
+    private lateinit var fabAssistant: FloatingActionButton
     
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { handleHomeworkImage(it) }
@@ -71,8 +86,10 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         teacherClient.setCallback(this)
         tts = TextToSpeech(this, this)
         
+        initSmartAssistant()
         extractIntentData()
         setupViews()
+        loadBroadcastAttachments()
         loadLessonData()
     }
     
@@ -80,6 +97,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         tts?.stop()
         tts?.shutdown()
         teacherClient.setCallback(null)
+        smartAssistant.cleanup()
         scope.cancel()
         super.onDestroy()
     }
@@ -93,6 +111,15 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         lessonUnit = intent.getStringExtra("lesson_unit") ?: "الوحدة الأولى"
         videoUrl = intent.getStringExtra("video_url") ?: ""
         pdfUrl = intent.getStringExtra("pdf_url") ?: ""
+        
+        val imagesList = intent.getStringArrayListExtra("lesson_images")
+        if (imagesList != null) {
+            lessonImages = imagesList
+        }
+        lessonPdfPath = intent.getStringExtra("lesson_pdf_path")
+        lessonVideoPath = intent.getStringExtra("lesson_video_path")
+        
+        isBroadcastLesson = intent.getBooleanExtra("is_broadcast_lesson", false)
     }
     
     private fun setupViews() {
@@ -152,6 +179,22 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         }
         
         updateReadButton()
+    }
+    
+    private fun initSmartAssistant() {
+        smartAssistant = SmartAssistant(this)
+        
+        fabAssistant = findViewById(R.id.fabAssistant)
+        fabAssistant.setOnClickListener {
+            SmartAssistantBottomSheet.show(
+                this,
+                smartAssistant,
+                lessonTitle,
+                lessonContent
+            )
+        }
+        
+        smartAssistant.initialize()
     }
     
     private fun setupVideoPlayer() {
@@ -250,6 +293,103 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         }
     }
     
+    private fun loadBroadcastAttachments() {
+    }
+    
+    private fun displayAttachments() {
+        Log.d(TAG, "displayAttachments - images: ${lessonImages.size}, pdf: ${lessonPdfPath}, video: ${lessonVideoPath}")
+        
+        if (lessonImages.isNotEmpty()) {
+            Log.d(TAG, "Showing ${lessonImages.size} images")
+            binding.imagesCard.visibility = View.VISIBLE
+            binding.imagesRecycler.visibility = View.VISIBLE
+            binding.imagesRecycler.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+            binding.imagesRecycler.adapter = ImageAdapter(lessonImages) { imagePath ->
+                showFullScreenImage(imagePath)
+            }
+        }
+        
+        if (!lessonPdfPath.isNullOrEmpty()) {
+            Log.d(TAG, "Showing PDF: $lessonPdfPath")
+            binding.pdfCard.visibility = View.VISIBLE
+            binding.openPdfButton.setOnClickListener {
+                openPdfViewer(lessonPdfPath!!)
+            }
+        }
+        
+        if (!lessonVideoPath.isNullOrEmpty()) {
+            Log.d(TAG, "Showing video: $lessonVideoPath")
+            binding.videoCard.visibility = View.VISIBLE
+            binding.openVideoButton.setOnClickListener {
+                openVideoPlayer(lessonVideoPath!!)
+            }
+        }
+    }
+    
+    private fun openPdfViewer(pdfPath: String) {
+        try {
+            val file = File(pdfPath)
+            if (!file.exists()) {
+                Toast.makeText(this, "الملف غير موجود", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/pdf")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "لا يوجد تطبيق لفتح ملفات PDF", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "خطأ في فتح الملف: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun openVideoPlayer(videoPath: String) {
+        try {
+            val file = File(videoPath)
+            if (!file.exists()) {
+                Toast.makeText(this, "الفيديو غير موجود", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "video/*")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "لا يوجد تطبيق لتشغيل الفيديو", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "خطأ في تشغيل الفيديو: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun showFullScreenImage(imagePath: String) {
+        try {
+            val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+            dialog.setContentView(R.layout.dialog_fullscreen_image)
+            val imageView = dialog.findViewById<android.widget.ImageView>(R.id.fullscreenImage)
+            
+            val bitmap = BitmapFactory.decodeFile(imagePath)
+            imageView?.setImageBitmap(bitmap)
+            
+            imageView?.setOnClickListener { dialog.dismiss() }
+            dialog.show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "خطأ في عرض الصورة: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
     private fun loadLessonData() {
         val lessons = repository.getSubjects()
             .find { it.id == subjectId }?.lessons ?: emptyList()
@@ -267,6 +407,18 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                 pdfUrl = lesson.pdfUrl ?: ""
             }
             questions = lesson.questions
+            
+            if (lessonImages.isEmpty() && !lesson.images.isNullOrEmpty()) {
+                lessonImages = lesson.images!!
+            }
+            if (lessonPdfPath.isNullOrEmpty() && !lesson.pdfPath.isNullOrEmpty()) {
+                lessonPdfPath = lesson.pdfPath
+            }
+            if (lessonVideoPath.isNullOrEmpty() && !lesson.videoPath.isNullOrEmpty()) {
+                lessonVideoPath = lesson.videoPath
+            }
+            
+            displayAttachments()
             
             if (videoUrl.isNotEmpty()) {
                 binding.videoCard.visibility = View.VISIBLE

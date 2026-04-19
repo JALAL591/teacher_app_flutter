@@ -4,12 +4,15 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.R
 import com.edu.teacher.databinding.*
+import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Lesson
+import com.edu.student.services.TeacherClient
 import com.edu.student.ui.common.LessonAdapter
 import com.edu.student.ui.lesson.LessonActivity
 import kotlinx.coroutines.*
@@ -19,10 +22,12 @@ class SubjectActivity : AppCompatActivity() {
     private lateinit var binding: StudentActivitySubjectBinding
     private lateinit var repository: StudentRepository
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val teacherClient: TeacherClient by lazy { StudentApp.getTeacherClient(this) }
     
     private var subjectId: String = ""
     private var subjectTitle: String = ""
     private var lessons: List<Lesson> = emptyList()
+    private var lessonBroadcastListener: (() -> Unit)? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,11 +40,31 @@ class SubjectActivity : AppCompatActivity() {
         subjectTitle = intent.getStringExtra("subject_title") ?: ""
         
         setupViews()
+        setupBroadcastListener()
         loadLessons()
+    }
+    
+    private fun setupBroadcastListener() {
+        lessonBroadcastListener = teacherClient.on("lesson_broadcast") { data ->
+            try {
+                val map = data as? Map<*, *> ?: return@on
+                val lesson = map["lesson"] as? Lesson ?: return@on
+                
+                if (lesson.subjectId == subjectId) {
+                    scope.launch(Dispatchers.Main) {
+                        loadLessons()
+                        Toast.makeText(this@SubjectActivity, "درس جديد: ${lesson.title}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
     }
     
     override fun onDestroy() {
         super.onDestroy()
+        lessonBroadcastListener?.invoke()
         scope.cancel()
     }
     
@@ -96,6 +121,9 @@ class SubjectActivity : AppCompatActivity() {
                         putExtra("lesson_unit", lesson.unit)
                         putExtra("video_url", lesson.videoUrl ?: "")
                         putExtra("pdf_url", lesson.pdfUrl ?: "")
+                        putExtra("lesson_images", ArrayList(lesson.images ?: emptyList()))
+                        putExtra("lesson_pdf_path", lesson.pdfPath ?: "")
+                        putExtra("lesson_video_path", lesson.videoPath ?: "")
                     }
                     startActivity(intent)
                 }

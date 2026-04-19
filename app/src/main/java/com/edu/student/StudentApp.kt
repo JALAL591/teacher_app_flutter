@@ -3,9 +3,12 @@ package com.edu.student
 import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import com.edu.common.ModelManager
 import com.edu.student.data.preferences.StudentPreferences
 import com.edu.student.services.TeacherClient
 import com.edu.student.utils.PermissionHelper
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class StudentApp : Application() {
     
@@ -72,6 +75,13 @@ class StudentApp : Application() {
         getTeacherClient(this)
         syncTheme()
         createNotificationChannel()
+        
+        GlobalScope.launch {
+            ModelManager.copyModelsAsync(this@StudentApp) { model, progress ->
+                android.util.Log.d("StudentApp", "Copying $model: $progress%")
+            }
+            ModelManager.logModelsInfo(this@StudentApp)
+        }
     }
     
     private fun syncTheme() {

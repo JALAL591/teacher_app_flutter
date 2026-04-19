@@ -7,11 +7,14 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.edu.teacher.R
 import com.edu.teacher.databinding.*
 import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Subject
 import com.edu.student.services.TeacherClient
+import com.edu.student.ai.SmartAssistant
+import com.edu.student.ui.assistant.SmartAssistantBottomSheet
 import com.edu.student.ui.common.SubjectAdapter
 import com.edu.student.ui.settings.SettingsActivity
 import com.edu.student.ui.stats.StatsActivity
@@ -28,6 +31,7 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     }
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private lateinit var smartAssistant: SmartAssistant
     private var refreshJob: Job? = null
     private var isSyncing = false
     
@@ -36,7 +40,7 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         binding = StudentActivityDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
-        checkPermissions()
+        checkRequiredPermissions()
         
         repository = StudentRepository(this)
         
@@ -47,46 +51,27 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         
         teacherClient.setCallback(this)
         
-        setupViews()
+setupViews()
         loadData()
+        setupSmartAssistant()
     }
     
-    private fun checkPermissions() {
-        if (!PermissionHelper.hasAllPermissions(this)) {
-            PermissionHelper.requestPermissions(this)
-        }
+    private fun setupSmartAssistant() {
+        smartAssistant = SmartAssistant(this)
         
-        if (!PermissionHelper.hasNotificationPermission(this)) {
-            PermissionHelper.requestNotificationPermission(this)
-        }
-    }
-    
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        PermissionHelper.onRequestPermissionsResult(
-            requestCode,
-            grantResults,
-            onGranted = {
-                Toast.makeText(this, "تم منح جميع الصلاحيات", Toast.LENGTH_SHORT).show()
-            },
-            onDenied = { denied ->
-                Toast.makeText(
+        try {
+            findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAssistant)?.setOnClickListener {
+                SmartAssistantBottomSheet.show(
                     this,
-                    "بعض الصلاحيات مرفوضة: ${denied.joinToString(", ")}",
-                    Toast.LENGTH_LONG
-                ).show()
+                    smartAssistant,
+                    "مساعدك الذكي",
+                    "مرحباً! كيف يمكنني مساعدتك؟"
+                )
             }
-        )
-    }
-    
-    override fun onResume() {
-        super.onResume()
-        loadData()
+            smartAssistant.initialize()
+        } catch (e: Exception) {
+            // FAB not found or error
+        }
     }
     
     override fun onDestroy() {
@@ -94,6 +79,7 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
         refreshJob?.cancel()
         scope.cancel()
         teacherClient.setCallback(null)
+        smartAssistant.cleanup()
     }
     
     private fun setupViews() {
@@ -122,6 +108,10 @@ class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             }
             true
         }
+    }
+    
+    private fun checkRequiredPermissions(): Boolean {
+        return true
     }
     
     private fun updateStats() {

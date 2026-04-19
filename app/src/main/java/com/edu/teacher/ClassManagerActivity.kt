@@ -18,6 +18,9 @@ import com.edu.teacher.databinding.ActivityClassManagerBinding
 import com.edu.teacher.databinding.ItemLocalLessonBinding
 import com.edu.teacher.databinding.ItemPublishedLessonBinding
 import org.json.JSONObject
+import java.io.File
+import android.util.Base64
+import com.edu.teacher.TeacherServer.LessonAttachments
 
 class ClassManagerActivity : AppCompatActivity() {
 
@@ -92,13 +95,22 @@ class ClassManagerActivity : AppCompatActivity() {
         binding.publishedLessonsRecyclerView.addItemDecoration(publishedDivider)
 
         binding.backButton.setOnClickListener { finish() }
+        binding.addLessonButton.isClickable = true
+        binding.addLessonButton.isFocusable = true
         binding.addLessonButton.setOnClickListener {
+            android.util.Log.d("ClassManager", "addLessonButton clicked")
             val intent = Intent(this, AddLessonActivity::class.java).apply {
                 putExtra("class_id", classId)
                 putExtra("subject_id", subjectId)
                 putExtra("teacher_id", teacherId)
             }
-            startActivity(intent)
+            try {
+                startActivity(intent)
+                android.util.Log.d("ClassManager", "startActivity called successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("ClassManager", "Error starting AddLessonActivity: ${e.message}", e)
+                Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
         binding.editLessonsButton.setOnClickListener {
             val intent = Intent(this, EditLessonActivity::class.java).apply {
@@ -187,8 +199,75 @@ class ClassManagerActivity : AppCompatActivity() {
             Toast.makeText(this, "تم تشغيل الرادار تلقائياً", Toast.LENGTH_SHORT).show()
         }
         
-        android.util.Log.d("ClassManager", "Calling server.broadcastLesson()")
-        server.broadcastLesson(lesson)
+        // Read attachments from lesson
+        val imagePath = lesson.optString("imageUri", "")
+        val videoPath = lesson.optString("videoUri", "")
+        val pdfPath = lesson.optString("pdfUri", "")
+        
+        android.util.Log.d("ClassManager", "Reading attachments - image: $imagePath, video: $videoPath, pdf: $pdfPath")
+        
+        val images = mutableListOf<String>()
+        
+        // Read image to Base64
+        if (imagePath.isNotEmpty()) {
+            try {
+                val file = File(imagePath)
+                if (file.exists()) {
+                    val bytes = file.readBytes()
+                    val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                    images.add(base64)
+                    android.util.Log.d("ClassManager", "Image converted to Base64: ${base64.take(50)}...")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ClassManager", "Error reading image: ${e.message}")
+            }
+        }
+        
+        var pdfData: String? = null
+        var pdfFileName: String? = null
+        
+        // Read PDF to Base64
+        if (pdfPath.isNotEmpty()) {
+            try {
+                val file = File(pdfPath)
+                if (file.exists()) {
+                    pdfData = Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+                    pdfFileName = file.name
+                    android.util.Log.d("ClassManager", "PDF converted to Base64: ${pdfData.take(50)}...")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ClassManager", "Error reading PDF: ${e.message}")
+            }
+        }
+        
+        var videoData: String? = null
+        var videoFileName: String? = null
+        
+        // Read video to Base64
+        if (videoPath.isNotEmpty()) {
+            try {
+                val file = File(videoPath)
+                if (file.exists()) {
+                    videoData = Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+                    videoFileName = file.name
+                    android.util.Log.d("ClassManager", "Video converted to Base64: ${videoData.take(50)}...")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ClassManager", "Error reading video: ${e.message}")
+            }
+        }
+        
+        // Create attachments
+        val attachments = LessonAttachments(
+            images = images,
+            pdfData = pdfData,
+            pdfFileName = pdfFileName,
+            videoData = videoData,
+            videoFileName = videoFileName
+        )
+        
+        android.util.Log.d("ClassManager", "Calling server.broadcastLesson() with attachments")
+        server.broadcastLesson(lesson, attachments)
         android.util.Log.d("ClassManager", "broadcastLesson completed")
         Toast.makeText(this, "تم بث الدرس للطلاب المتصلين", Toast.LENGTH_SHORT).show()
     }

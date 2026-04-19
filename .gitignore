@@ -9,3 +9,5 @@
 /build
 /captures
 .externalNativeBuild
+/app/src/main/assets/models/*.bin
+/app/src/main/assets/models/*.gguf

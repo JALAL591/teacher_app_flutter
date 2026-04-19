@@ -156,6 +156,52 @@
                     </FrameLayout>
                 </androidx.cardview.widget.CardView>
 
+                <!-- Images Card (for broadcast lessons) -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/imagesCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/dark_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="الصور"
+                            android:textColor="@color/indigo_400"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/imagesRecycler"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal"
+                            android:visibility="gone" />
+
+                        <Button
+                            android:id="@+id/openVideoButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:backgroundTint="@color/indigo_600"
+                            android:text="تشغيل الفيديو"
+                            android:textColor="@android:color/white"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            app:cornerRadius="8dp" />
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
                 <!-- PDF Viewer Card -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/pdfCard"
@@ -332,5 +378,16 @@
             </LinearLayout>
         </FrameLayout>
     </ScrollView>
+
+    <!-- Floating Assistant Button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAssistant"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:src="@drawable/ic_bot"
+        app:backgroundTint="@color/primary"
+        app:tint="@android:color/white" />
 </LinearLayout>
 </layout>

@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.edu.teacher.databinding.ActivityAddLessonBinding
 import com.edu.teacher.databinding.ItemQuestionBinding
 import com.google.android.material.textfield.TextInputEditText
@@ -30,6 +31,8 @@ class AddLessonActivity : AppCompatActivity() {
     private var selectedClassId = ""
     private var selectedUnit = ""
     private var selectedPdfPath: String = ""
+    private var selectedImagePath: String = ""
+    private var selectedVideoPath: String = ""
     private var questionsList = mutableListOf<QuestionItem>()
     
     private var selectedSubjectId: String = ""
@@ -77,6 +80,15 @@ class AddLessonActivity : AppCompatActivity() {
             binding.addEssayButton.setOnClickListener { addQuestion("essay") }
             
             binding.selectPdfBtn.setOnClickListener { pickPdfLauncher.launch("application/pdf") }
+            
+            // Image and Video selectors
+            binding.imageContainer.setOnClickListener {
+                pickImageLauncher.launch("image/*")
+            }
+            binding.videoContainer.setOnClickListener {
+                pickVideoLauncher.launch("video/*")
+            }
+            
             binding.saveButton.setOnClickListener { saveLesson() }
 
             // Telegram-style bottom navigation
@@ -92,6 +104,18 @@ class AddLessonActivity : AppCompatActivity() {
             binding.bottomNav.setActiveTab(2)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            copyImageToAppStorage(uri)
+        }
+    }
+
+    private val pickVideoLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            copyVideoToAppStorage(uri)
         }
     }
 
@@ -120,6 +144,56 @@ class AddLessonActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, R.string.error_pdf_copy, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun copyImageToAppStorage(uri: Uri) {
+        try {
+            android.util.Log.d("AddLesson", "copyImageToAppStorage called with uri: $uri")
+            val inputStream = contentResolver.openInputStream(uri)
+            if (inputStream != null) {
+                val fileName = "lesson_image_${System.currentTimeMillis()}.jpg"
+                val file = File(filesDir, fileName)
+                file.createNewFile()
+                inputStream.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                selectedImagePath = file.absolutePath
+                android.util.Log.d("AddLesson", "Image saved to: $selectedImagePath")
+                binding.imagePreview.visibility = View.VISIBLE
+                com.bumptech.glide.Glide.with(this).load(file).into(binding.imagePreview)
+                Toast.makeText(this, "تم إضافة الصورة", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AddLesson", "Error saving image: ${e.message}", e)
+            Toast.makeText(this, "فشل في إضافة الصورة", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun copyVideoToAppStorage(uri: Uri) {
+        try {
+            android.util.Log.d("AddLesson", "copyVideoToAppStorage called with uri: $uri")
+            val inputStream = contentResolver.openInputStream(uri)
+            if (inputStream != null) {
+                val fileName = "lesson_video_${System.currentTimeMillis()}.mp4"
+                val file = File(filesDir, fileName)
+                file.createNewFile()
+                inputStream.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                selectedVideoPath = file.absolutePath
+                android.util.Log.d("AddLesson", "Video saved to: $selectedVideoPath")
+                binding.videoPreview.text = "✅ فيديو جاهز"
+                binding.videoPreview.visibility = View.VISIBLE
+                Toast.makeText(this, "تم إضافة الفيديو", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AddLesson", "Error saving video: ${e.message}", e)
+            Toast.makeText(this, "فشل في إضافة الفيديو", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -241,6 +315,9 @@ class AddLessonActivity : AppCompatActivity() {
             questionsArray.put(qObj)
         }
 
+        //Log media paths
+        android.util.Log.d("AddLesson", "Saving lesson with: image=$selectedImagePath, video=$selectedVideoPath, pdf=$selectedPdfPath")
+
         val lessonObj = JSONObject().apply {
             put("id", DataManager.generateLessonId() as Any)
             put("teacherId", teacherId as Any)
@@ -253,6 +330,8 @@ class AddLessonActivity : AppCompatActivity() {
             put("title", title as Any)
             put("content", binding.contentInput.text.toString() as Any)
             put("pdfUri", selectedPdfPath as Any)
+            put("imageUri", selectedImagePath as Any)
+            put("videoUri", selectedVideoPath as Any)
             put("questions", questionsArray as Any)
             put("createdAt", DataManager.getSyncTimestamp() as Any)
             put("isPublished", false as Any)

@@ -304,6 +304,7 @@
     <string name="label_target_class">الفصل الدراسي المستهدف</string>
     <string name="label_unit">الوحدة</string>
     <string name="label_change_image">تغيير الصورة</string>
+    <string name="label_add_image">إضافة صورة</string>
     <string name="label_add_video">إضافة فيديو</string>
     <string name="label_questions">&#x2753; الأسئلة</string>
     <string name="label_stat_item">عنصر</string>
@@ -433,5 +434,12 @@
     <string name="view">عرض</string>
     <string name="lessons">دروس</string>
     <string name="classes">فصول</string>
+
+    <!-- ===== Dashboard Quick Actions ===== -->
+    <string name="stat_lessons">الدروس</string>
+    <string name="subtitle_sync">مزامنة البيانات</string>
+    <string name="section_quick_actions">إجراءات سريعة</string>
+    <string name="subtitle_add_class">إضافة فصل دراسي</string>
+    <string name="subtitle_settings">تخصيص التطبيق</string>
 
 </resources>

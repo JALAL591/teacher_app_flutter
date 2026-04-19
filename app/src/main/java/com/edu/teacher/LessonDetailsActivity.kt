@@ -11,6 +11,8 @@ import com.bumptech.glide.Glide
 import com.edu.teacher.databinding.ActivityLessonDetailsBinding
 import org.json.JSONObject
 import java.io.File
+import android.util.Base64
+import com.edu.teacher.TeacherServer.LessonAttachments
 
 class LessonDetailsActivity : BaseActivity() {
 
@@ -358,8 +360,75 @@ class LessonDetailsActivity : BaseActivity() {
         android.util.Log.d("LessonDetails", "Server running: ${server?.isRunning == true}")
         
         if (server != null && server.isRunning) {
+            // Read attachments from lesson
+            val imagePath = publishedLesson.optString("imageUri", "")
+            val videoPath = publishedLesson.optString("videoUri", "")
+            val pdfPath = publishedLesson.optString("pdfUri", "")
+            
+            android.util.Log.d("LessonDetails", "Reading attachments - image: $imagePath, video: $videoPath, pdf: $pdfPath")
+            
+            val images = mutableListOf<String>()
+            
+            // Read image to Base64
+            if (imagePath.isNotEmpty()) {
+                try {
+                    val file = File(imagePath)
+                    if (file.exists()) {
+                        val bytes = file.readBytes()
+                        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                        images.add(base64)
+                        android.util.Log.d("LessonDetails", "Image converted to Base64")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("LessonDetails", "Error reading image: ${e.message}")
+                }
+            }
+            
+            var pdfData: String? = null
+            var pdfFileName: String? = null
+            
+            // Read PDF to Base64
+            if (pdfPath.isNotEmpty()) {
+                try {
+                    val file = File(pdfPath)
+                    if (file.exists()) {
+                        pdfData = Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+                        pdfFileName = file.name
+                        android.util.Log.d("LessonDetails", "PDF converted to Base64")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("LessonDetails", "Error reading PDF: ${e.message}")
+                }
+            }
+            
+            var videoData: String? = null
+            var videoFileName: String? = null
+            
+            // Read video to Base64
+            if (videoPath.isNotEmpty()) {
+                try {
+                    val file = File(videoPath)
+                    if (file.exists()) {
+                        videoData = Base64.encodeToString(file.readBytes(), Base64.NO_WRAP)
+                        videoFileName = file.name
+                        android.util.Log.d("LessonDetails", "Video converted to Base64")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("LessonDetails", "Error reading video: ${e.message}")
+                }
+            }
+            
+            // Create attachments
+            val attachments = LessonAttachments(
+                images = images,
+                pdfData = pdfData,
+                pdfFileName = pdfFileName,
+                videoData = videoData,
+                videoFileName = videoFileName
+            )
+            
             android.util.Log.d("LessonDetails", "Calling server.broadcastLesson()")
-            server.broadcastLesson(publishedLesson)
+            server.broadcastLesson(publishedLesson, attachments)
             android.util.Log.d("LessonDetails", "Lesson broadcast completed")
             Toast.makeText(this, "تم إرسال الدرس للطلاب", Toast.LENGTH_SHORT).show()
         } else {

@@ -12,6 +12,8 @@ import com.edu.teacher.databinding.*
 import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.services.TeacherClient
+import com.edu.student.ai.SmartAssistant
+import com.edu.student.ui.assistant.SmartAssistantBottomSheet
 import com.edu.student.ui.common.SubjectProgressAdapter
 import com.edu.student.ui.dashboard.DashboardActivity
 import com.edu.student.ui.settings.SettingsActivity
@@ -29,6 +31,7 @@ class StatsActivity : AppCompatActivity() {
     private val homeworkSolutions = mutableListOf<JSONObject>()
     private lateinit var adapter: HomeworkStatsAdapter
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private lateinit var smartAssistant: SmartAssistant
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,10 +45,30 @@ class StatsActivity : AppCompatActivity() {
         loadHomeworkSolutions()
         setupTeacherCallbacks()
         loadData()
+        setupSmartAssistant()
+    }
+    
+    private fun setupSmartAssistant() {
+        smartAssistant = SmartAssistant(this)
+        
+        try {
+            findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAssistant)?.setOnClickListener {
+                SmartAssistantBottomSheet.show(
+                    this,
+                    smartAssistant,
+                    "مساعد الواجبات",
+                    "إحصائيات واجباتك:"
+                )
+            }
+            smartAssistant.initialize()
+        } catch (e: Exception) {
+            // FAB not found
+        }
     }
     
     override fun onDestroy() {
         super.onDestroy()
+        smartAssistant.cleanup()
         scope.cancel()
     }
     

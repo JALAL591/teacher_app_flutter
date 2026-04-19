@@ -209,6 +209,7 @@ class DashboardActivity : BaseActivity() {
                 2 -> startActivity(Intent(this, AddLessonActivity::class.java))
                 3 -> startActivity(Intent(this, StudentsActivity::class.java))
                 4 -> startActivity(Intent(this, SettingsActivity::class.java))
+                else -> { }
             }
         }
     }

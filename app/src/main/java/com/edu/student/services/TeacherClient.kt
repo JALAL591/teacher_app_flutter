@@ -1,6 +1,7 @@
 package com.edu.student.services
 
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import com.edu.student.data.preferences.StudentPreferences
 import com.edu.student.domain.model.AnswerSubmission
@@ -13,6 +14,8 @@ import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetAddress
@@ -25,6 +28,14 @@ class TeacherClient(private val context: Context) {
         private const val TAG = "TeacherClient"
         const val SERVER_PORT = 9999
     }
+
+    data class SavedAttachments(
+        val images: List<String> = emptyList(),
+        val pdfPath: String? = null,
+        val videoPath: String? = null
+    )
+    
+    private var currentAttachments: SavedAttachments? = null
     
     private val prefs = StudentPreferences(context)
     private val gson = Gson()
@@ -374,9 +385,12 @@ class TeacherClient(private val context: Context) {
                 
                 action == "LESSON_BROADCAST" -> {
                     val lessonJson = json.optJSONObject("lesson")
-                    if (lessonJson != null) {
-                        processDirectLesson(lessonJson)
-                    }
+                    val attachmentsArray = json.optJSONArray("attachments")
+                    
+                    val savedAttachments = saveAttachments(attachmentsArray)
+                    currentAttachments = savedAttachments
+                    
+                    lessonJson?.let { processDirectLesson(it, savedAttachments) }
                 }
                 
                 status == "REGISTERED" -> {
@@ -399,18 +413,120 @@ class TeacherClient(private val context: Context) {
         }
     }
     
-    private suspend fun processDirectLesson(json: JSONObject) {
+    private suspend fun processDirectLesson(json: JSONObject, attachments: SavedAttachments? = null) {
         try {
             if (!isLessonForThisStudent(json)) {
                 Log.d(TAG, "Lesson not for this student, skipping")
                 return
             }
-            val lesson = gson.fromJson(json.toString(), com.edu.student.domain.model.Lesson::class.java)
-            processLesson(lesson)
+            
+            val lessonJson = JSONObject(json.toString())
+            
+            attachments?.let { att ->
+                Log.d(TAG, "Processing attachments - images: ${att.images.size}, pdf: ${att.pdfPath}, video: ${att.videoPath}")
+                if (att.images.isNotEmpty()) {
+                    val imagesArray = JSONArray()
+                    att.images.forEach { imagesArray.put(it) }
+                    lessonJson.put("images", imagesArray)
+                    Log.d(TAG, "Added ${att.images.size} images to lesson")
+                }
+                att.pdfPath?.let { 
+                    lessonJson.put("pdfPath", it)
+                    Log.d(TAG, "Added PDF path: $it")
+                }
+                att.videoPath?.let { 
+                    lessonJson.put("videoPath", it)
+                    Log.d(TAG, "Added video path: $it")
+                }
+            }
+            
+            val lesson = gson.fromJson(lessonJson.toString(), com.edu.student.domain.model.Lesson::class.java)
+            Log.d(TAG, "Parsed lesson: ${lesson.title}, images: ${lesson.images?.size}, pdf: ${lesson.pdfPath}, video: ${lesson.videoPath}")
+            processLesson(lesson, attachments)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing direct lesson: ${e.message}")
         }
     }
+
+    private fun saveAttachments(attachmentsArray: JSONArray?): SavedAttachments {
+        val images = mutableListOf<String>()
+        var pdfPath: String? = null
+        var videoPath: String? = null
+        
+        attachmentsArray?.let { array ->
+            for (i in 0 until array.length()) {
+                try {
+                    val att = array.getJSONObject(i)
+                    val type = att.optString("type")
+                    val data = att.optString("data")
+                    
+                    when (type) {
+                        "image" -> {
+                            val path = saveBase64Image(data)
+                            if (path != null) images.add(path)
+                        }
+                        "pdf" -> {
+                            val fileName = att.optString("fileName", "document.pdf")
+                            pdfPath = saveBase64Pdf(data, fileName)
+                        }
+                        "video" -> {
+                            val fileName = att.optString("fileName", "video.mp4")
+                            videoPath = saveBase64Video(data, fileName)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error saving attachment: ${e.message}")
+                }
+            }
+        }
+        
+        return SavedAttachments(images, pdfPath, videoPath)
+    }
+
+    private fun saveBase64Image(base64: String): String? {
+        return try {
+            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            val file = File(context.filesDir, "images/img_${System.currentTimeMillis()}.jpg")
+            file.parentFile?.mkdirs()
+            FileOutputStream(file).use { it.write(bytes) }
+            file.absolutePath
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving image: ${e.message}")
+            null
+        }
+    }
+
+    private fun saveBase64Pdf(base64: String, fileName: String): String? {
+        return try {
+            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            val timestamp = System.currentTimeMillis()
+            val safeFileName = fileName.replace(" ", "_")
+            val file = File(context.filesDir, "pdfs/${safeFileName}_$timestamp.pdf")
+            file.parentFile?.mkdirs()
+            FileOutputStream(file).use { it.write(bytes) }
+            file.absolutePath
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving PDF: ${e.message}")
+            null
+        }
+    }
+
+    private fun saveBase64Video(base64: String, fileName: String): String? {
+        return try {
+            val bytes = Base64.decode(base64, Base64.DEFAULT)
+            val timestamp = System.currentTimeMillis()
+            val safeFileName = fileName.replace(" ", "_")
+            val file = File(context.filesDir, "videos/${safeFileName}_$timestamp.mp4")
+            file.parentFile?.mkdirs()
+            FileOutputStream(file).use { it.write(bytes) }
+            file.absolutePath
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving video: ${e.message}")
+            null
+        }
+    }
+
+    fun getCurrentAttachments(): SavedAttachments? = currentAttachments
     
     private suspend fun processLessonsArray(lessonsJson: JSONArray) {
         try {
@@ -454,7 +570,7 @@ class TeacherClient(private val context: Context) {
         }
     }
     
-    private suspend fun processLesson(lesson: com.edu.student.domain.model.Lesson) {
+    private suspend fun processLesson(lesson: com.edu.student.domain.model.Lesson, attachments: SavedAttachments? = null) {
         try {
             Log.d(TAG, "Processing lesson: ${lesson.title}")
             
@@ -474,7 +590,7 @@ class TeacherClient(private val context: Context) {
             
             if (isRunning) {
                 safeEmitCallback { callback?.onLessonsReceived(listOf(lesson)) }
-                safeEmit("lesson_broadcast", lesson)
+                safeEmit("lesson_broadcast", mapOf("lesson" to lesson, "attachments" to (attachments ?: SavedAttachments())))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error processing lesson: ${e.message}")
