@@ -46,14 +46,15 @@
             android:layout_height="wrap_content"
             android:background="@drawable/gradient_header"
             android:orientation="vertical"
-            android:paddingTop="48dp"
-            android:paddingBottom="24dp"
-            android:paddingHorizontal="20dp">
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:layoutDirection="locale">
@@ -119,7 +120,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="8dp"
                 android:orientation="horizontal"
                 android:layoutDirection="locale">
 
@@ -127,9 +128,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginEnd="4dp"
                     app:cardBackgroundColor="#40FFFFFF"
-                    app:cardCornerRadius="16dp"
+                    app:cardCornerRadius="8dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp">
 
@@ -138,11 +139,11 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:padding="8dp">
 
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_star"
                             app:tint="@android:color/white" />
 
@@ -150,9 +151,9 @@
                             android:id="@+id/starsCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="2dp"
                             android:textColor="@android:color/white"
-                            android:textSize="20sp"
+                            android:textSize="18sp"
                             android:textStyle="bold"
                             tools:text="125" />
 
@@ -161,7 +162,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/student_stars"
                             android:textColor="@color/info"
-                            android:textSize="10sp" />
+                            android:textSize="11sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -171,7 +172,7 @@
                     android:layout_weight="1"
                     android:layout_marginHorizontal="4dp"
                     app:cardBackgroundColor="#40FFFFFF"
-                    app:cardCornerRadius="16dp"
+                    app:cardCornerRadius="8dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp">
 
@@ -180,11 +181,11 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:padding="8dp">
 
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_level"
                             app:tint="@android:color/white" />
 
@@ -192,9 +193,9 @@
                             android:id="@+id/levelCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="2dp"
                             android:textColor="@android:color/white"
-                            android:textSize="20sp"
+                            android:textSize="18sp"
                             android:textStyle="bold"
                             tools:text="5" />
 
@@ -203,7 +204,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/student_level"
                             android:textColor="@color/info"
-                            android:textSize="10sp" />
+                            android:textSize="11sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -211,9 +212,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="4dp"
                     app:cardBackgroundColor="#40FFFFFF"
-                    app:cardCornerRadius="16dp"
+                    app:cardCornerRadius="8dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp">
 
@@ -222,11 +223,11 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:padding="8dp">
 
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_book"
                             app:tint="@android:color/white" />
 
@@ -234,9 +235,9 @@
                             android:id="@+id/subjectsCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="2dp"
                             android:textColor="@android:color/white"
-                            android:textSize="20sp"
+                            android:textSize="18sp"
                             android:textStyle="bold"
                             tools:text="8" />
 
@@ -245,7 +246,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/student_subjects"
                             android:textColor="@color/info"
-                            android:textSize="10sp" />
+                            android:textSize="11sp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -303,26 +304,21 @@
             </LinearLayout>
         </FrameLayout>
 
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottomNav"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/white"
-            app:itemIconTint="@color/nav_selector"
-            app:itemTextColor="@color/nav_selector"
-            app:labelVisibilityMode="labeled"
-            app:menu="@menu/student_bottom_nav" />
-        
-        <!-- Floating Assistant Button - Top Left -->
+        <!-- Floating Assistant Button - Top Right -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabAssistant"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|start"
+            android:layout_gravity="top|end"
             android:layout_margin="16dp"
             android:src="@drawable/ic_bot"
             app:backgroundTint="@color/primary"
             app:tint="@android:color/white"
-            app:fabSize="mini" />
+            app:fabSize="normal" />
+
+        <com.edu.student.ui.BottomNav
+            android:id="@+id/bottomNav"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
     </LinearLayout>
 </layout>

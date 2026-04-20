@@ -94,19 +94,18 @@ setupViews()
             startActivity(Intent(this, StatsActivity::class.java))
         }
         
-        binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                com.edu.teacher.R.id.nav_home -> { }
-                com.edu.teacher.R.id.nav_stats -> {
+        binding.bottomNav.setOnItemSelectedListener { position ->
+            when (position) {
+                0 -> { }
+                1 -> {
                     startActivity(Intent(this, StatsActivity::class.java))
                     finish()
                 }
-                com.edu.teacher.R.id.nav_settings -> {
+                2 -> {
                     startActivity(Intent(this, SettingsActivity::class.java))
                     finish()
                 }
             }
-            true
         }
     }
     

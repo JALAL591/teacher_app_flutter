@@ -11,7 +11,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/dark_surface"
+        android:background="@color/main_background"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="16dp">
@@ -20,9 +20,9 @@
             android:id="@+id/backButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@drawable/rounded_white_transparent"
+            android:background="@drawable/rounded_chip"
             android:src="@drawable/ic_arrow_right"
-            app:tint="@android:color/white" />
+            app:tint="@color/icon_primary" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text_primary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
@@ -46,7 +46,7 @@
                 android:id="@+id/subjectName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/indigo_400"
+                android:textColor="@color/text_secondary"
                 android:textSize="9sp" />
         </LinearLayout>
 
@@ -68,7 +68,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginTop="8dp"
-        android:background="@drawable/rounded_dark"
+        android:background="@color/input_background"
         android:orientation="horizontal"
         android:padding="4dp">
 
@@ -124,7 +124,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/dark_surface"
+                    app:cardBackgroundColor="@color/card_background"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp">
 
@@ -198,7 +198,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:visibility="gone"
-                    app:cardBackgroundColor="@color/dark_surface"
+                    app:cardBackgroundColor="@color/card_background"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp">
 
@@ -284,8 +284,8 @@
                                 app:cornerRadius="8dp" />
                         </LinearLayout>
 
-                        <com.github.barteksc.pdfviewer.PDFView
-                            android:id="@+id/pdfView"
+                        <FrameLayout
+                            android:id="@+id/pdfViewContainer"
                             android:layout_width="match_parent"
                             android:layout_height="500dp"
                             android:layout_marginTop="12dp"
@@ -341,7 +341,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    app:cardBackgroundColor="@color/dark_surface"
+                    app:cardBackgroundColor="@color/card_background"
                     app:cardCornerRadius="24dp"
                     app:cardElevation="0dp">
 
@@ -425,9 +425,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:layout_marginTop="16dp"
-                    android:backgroundTint="@color/dark_surface"
+                    android:backgroundTint="@color/input_background"
                     android:text="@string/student_capture_homework"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     app:cornerRadius="16dp" />
 
                 <Button

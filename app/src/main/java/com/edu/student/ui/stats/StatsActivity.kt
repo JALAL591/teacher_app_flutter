@@ -17,6 +17,7 @@ import com.edu.student.ui.assistant.SmartAssistantBottomSheet
 import com.edu.student.ui.common.SubjectProgressAdapter
 import com.edu.student.ui.dashboard.DashboardActivity
 import com.edu.student.ui.settings.SettingsActivity
+import com.edu.student.ui.subject.SubjectActivity
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -80,21 +81,20 @@ class StatsActivity : AppCompatActivity() {
     private fun setupViews() {
         binding.backButton.setOnClickListener { finish() }
         
-        binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_home -> {
+        binding.bottomNav.setOnItemSelectedListener { position ->
+            when (position) {
+                0 -> {
                     startActivity(Intent(this, DashboardActivity::class.java))
                     finish()
                 }
-                R.id.nav_stats -> { }
-                R.id.nav_settings -> {
+                1 -> { }
+                2 -> {
                     startActivity(Intent(this, SettingsActivity::class.java))
                     finish()
                 }
             }
-            true
         }
-        binding.bottomNav.selectedItemId = R.id.nav_stats
+        binding.bottomNav.setActiveTab(1)
         
         binding.homeworkRecycler.layoutManager = LinearLayoutManager(this)
         

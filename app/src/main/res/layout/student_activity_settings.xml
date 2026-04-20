@@ -344,14 +344,9 @@
             </LinearLayout>
         </ScrollView>
 
-        <com.google.android.material.bottomnavigation.BottomNavigationView
+        <com.edu.student.ui.BottomNav
             android:id="@+id/bottomNav"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@android:color/white"
-            app:itemIconTint="@color/nav_selector"
-            app:itemTextColor="@color/nav_selector"
-            app:labelVisibilityMode="labeled"
-            app:menu="@menu/student_bottom_nav" />
+            android:layout_height="wrap_content" />
     </LinearLayout>
 </layout>

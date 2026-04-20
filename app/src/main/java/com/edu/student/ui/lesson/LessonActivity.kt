@@ -32,6 +32,11 @@ import com.edu.student.ui.common.QuestionAdapter
 import com.edu.student.ai.SmartAssistant
 import com.edu.student.ui.assistant.SmartAssistantBottomSheet
 import com.edu.student.utils.PdfTextExtractor
+import com.github.barteksc.pdfviewer.PDFView
+import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener
+import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
+import com.github.barteksc.pdfviewer.util.FitPolicy
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import kotlinx.coroutines.*
@@ -78,6 +83,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     private var isBroadcastLesson = false
     private lateinit var smartAssistant: SmartAssistant
     private lateinit var fabAssistant: FloatingActionButton
+    private var pdfView: PDFView? = null
     
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { handleHomeworkImage(it) }
@@ -535,34 +541,40 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                 Log.d(TAG, "No cached PDF text found")
             }
 
-            binding.pdfView.visibility = View.VISIBLE
+            val container = binding.root.findViewById<android.widget.FrameLayout>(R.id.pdfViewContainer)
+            container.visibility = View.VISIBLE
             binding.pdfPrevPage?.visibility = View.VISIBLE
             binding.pdfNextPage?.visibility = View.VISIBLE
             binding.pdfPageIndicator?.visibility = View.VISIBLE
 
-            binding.pdfView.fromFile(file)
-                .enableSwipe(true)
-                .swipeHorizontal(false)
-                .enableDoubletap(true)
-                .enableAnnotationRendering(false)
-                .password(null)
-                .scrollHandle(null)
-                .enableAntialiasing(true)
-                .spacing(10)
-                .autoSpacing(false)
-                .pageFitPolicy(com.github.barteksc.pdfviewer.util.FitPolicy.WIDTH)
-                .defaultPage(0)
-                .onPageChange { page, _ ->
-                    binding.pdfPageIndicator?.text = "${page + 1}/${binding.pdfView.pageCount}"
-                }
-                .load()
+            pdfView = PDFView(this, null)
+            container.addView(pdfView!!)
 
-            binding.pdfPageIndicator?.text = "1/${binding.pdfView.pageCount}"
+            pdfView?.fromFile(file)
+                ?.enableSwipe(true)
+                ?.swipeHorizontal(false)
+                ?.enableDoubletap(true)
+                ?.enableAnnotationRendering(false)
+                ?.password(null)
+                ?.scrollHandle(DefaultScrollHandle(this))
+                ?.enableAntialiasing(true)
+                ?.spacing(10)
+                ?.autoSpacing(false)
+                ?.pageFitPolicy(FitPolicy.WIDTH)
+                ?.defaultPage(0)
+                ?.onPageChange(object : OnPageChangeListener {
+                    override fun onPageChanged(page: Int, pageCount: Int) {
+                        binding.pdfPageIndicator?.text = "${page + 1}/$pageCount"
+                    }
+                })
+                ?.load()
+
+            binding.pdfPageIndicator?.text = "1/${pdfView?.pageCount ?: 1}"
 
             binding.pdfPrevPage?.setOnClickListener { prevPdfPage() }
             binding.pdfNextPage?.setOnClickListener { nextPdfPage() }
 
-            Log.d(TAG, "PDF loaded successfully: ${binding.pdfView.pageCount} pages")
+            Log.d(TAG, "PDF loaded successfully: ${pdfView?.pageCount ?: 0} pages")
         } catch (e: Exception) {
             Log.e(TAG, "Error opening PDF: ${e.message}")
             tryExternalPdfViewer(pdfPath)
@@ -572,17 +584,21 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     private var savedLesson: JSONObject? = null
 
     private fun prevPdfPage() {
-        val currentPage = binding.pdfView.currentPage
-        if (currentPage > 0) {
-            binding.pdfView.jumpTo(currentPage - 1)
+        pdfView?.let { pdf ->
+            val currentPage = pdf.currentPage
+            if (currentPage > 0) {
+                pdf.jumpTo(currentPage - 1)
+            }
         }
     }
 
     private fun nextPdfPage() {
-        val totalPages = binding.pdfView.pageCount
-        val currentPage = binding.pdfView.currentPage
-        if (currentPage < totalPages - 1) {
-            binding.pdfView.jumpTo(currentPage + 1)
+        pdfView?.let { pdf ->
+            val totalPages = pdf.pageCount
+            val currentPage = pdf.currentPage
+            if (currentPage < totalPages - 1) {
+                pdf.jumpTo(currentPage + 1)
+            }
         }
     }
     

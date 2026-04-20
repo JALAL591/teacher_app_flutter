@@ -11,9 +11,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' }
+        maven { url "https://jitpack.io" }
     }
 }
 
-rootProject.name = "MyApp"
-include ':app'
+rootProject.name = "teacher_app_flutter-main"
+include ":app"

@@ -12,6 +12,7 @@
     <string name="nav_attendance">حضور وغياب</string>
     <string name="nav_stats">الإحصائيات</string>
     <string name="nav_settings">الإعدادات</string>
+    <string name="nav_subjects">المواد</string>
     <string name="bottom_nav_preview_text">شريط التنقل</string>
 
     <!-- ===== Page Titles ===== -->

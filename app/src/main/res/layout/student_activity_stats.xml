@@ -474,13 +474,10 @@
         </LinearLayout>
     </ScrollView>
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
+    <com.edu.student.ui.BottomNav
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/light_surface"
-        app:menu="@menu/student_bottom_nav"
-        app:labelVisibilityMode="labeled" />
+        android:layout_height="wrap_content" />
 
     <!-- Floating Assistant Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton

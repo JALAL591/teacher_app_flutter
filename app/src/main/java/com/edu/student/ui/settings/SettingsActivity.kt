@@ -121,22 +121,21 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             logout()
         }
 
-        binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_home -> {
+        binding.bottomNav.setOnItemSelectedListener { position ->
+            when (position) {
+                0 -> {
                     startActivity(Intent(this, DashboardActivity::class.java))
                     finish()
                 }
-                R.id.nav_stats -> {
+                1 -> {
                     startActivity(Intent(this, StatsActivity::class.java))
                     finish()
                 }
-                R.id.nav_settings -> { }
+                2 -> { }
             }
-            true
         }
 
-        binding.bottomNav.selectedItemId = R.id.nav_settings
+        binding.bottomNav.setActiveTab(2)
         binding.subjectsRecycler.layoutManager = LinearLayoutManager(this)
     }
 

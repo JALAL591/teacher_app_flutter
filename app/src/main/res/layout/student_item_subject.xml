@@ -4,16 +4,16 @@
 
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="8dp"
         android:background="@drawable/rounded_card"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="16dp">
+        android:padding="12dp">
 
     <View
         android:id="@+id/colorIndicator"
         android:layout_width="8dp"
-        android:layout_height="48dp"
+        android:layout_height="40dp"
         android:background="@drawable/rounded_color_indicator" />
 
     <FrameLayout
@@ -41,7 +41,7 @@
             android:id="@+id/subjectTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/white"
+            android:textColor="#000000"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -50,7 +50,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="@color/text_hint"
+            android:textColor="#000000"
             android:textSize="10sp" />
     </LinearLayout>
 
