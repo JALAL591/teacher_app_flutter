@@ -20,7 +20,9 @@ import com.edu.teacher.databinding.*
 import com.edu.teacher.R
 import com.edu.student.StudentApp
 import com.edu.student.data.repository.StudentRepository
+import com.edu.student.data.LessonStorage
 import com.edu.student.domain.model.AnswerSubmission
+import org.json.JSONObject
 import com.edu.student.domain.model.Lesson
 import com.edu.student.domain.model.Question
 import com.edu.student.services.TeacherClient
@@ -30,6 +32,7 @@ import com.edu.student.ui.common.QuestionAdapter
 import com.edu.student.ai.SmartAssistant
 import com.edu.student.ui.assistant.SmartAssistantBottomSheet
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.gson.Gson
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -40,7 +43,8 @@ import java.util.*
 class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, TeacherClient.ClientCallback {
     
     private val TAG = "LessonActivity"
-    
+    private val gson = Gson()
+
     private lateinit var binding: StudentActivityLessonBinding
     private lateinit var repository: StudentRepository
     private val teacherClient: TeacherClient by lazy { 
@@ -122,6 +126,12 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     }
     
     private fun updateLessonFromBroadcast(lesson: Lesson, attachments: SavedAttachments?) {
+        // ✅ ربط الوسائط بالدرس المحدد فقط
+        if (lesson.id != lessonId) {
+            Log.d(TAG, "Ignoring lesson ${lesson.id} - not current lesson $lessonId")
+            return
+        }
+        
         currentLesson = lesson
         
         if (attachments != null) {
@@ -149,7 +159,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             }
         }
         
-        Log.e(TAG, "Updating lesson data:")
+        Log.e(TAG, "Updating lesson ${lesson.id} with media:")
         Log.e(TAG, "lessonImages: ${lessonImages.size}")
         Log.e(TAG, "lessonPdfPath: $lessonPdfPath")
         Log.e(TAG, "lessonVideoPath: $lessonVideoPath")
@@ -327,6 +337,10 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                 pdfFile.writeBytes(bytes)
                 
                 binding.videoProgress.visibility = View.GONE
+                
+                val extractedText = smartAssistant.loadLessonFromPdf(pdfFile, lessonTitle)
+                Log.e(TAG, "PDF extracted: ${extractedText.length} chars")
+                
                 openPdfFile(pdfFile)
             } catch (e: Exception) {
                 binding.videoProgress.visibility = View.GONE
@@ -465,23 +479,20 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                 Toast.makeText(this, "الملف غير موجود", Toast.LENGTH_SHORT).show()
                 return
             }
-            
-            displayLocalPdf(file)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error opening PDF: ${e.message}")
-            tryExternalPdfViewer(pdfPath)
-        }
-    }
-    
-    private fun displayLocalPdf(file: File) {
-        try {
+
+            val extractedText = savedLesson?.optString("extractedText", "")
+            if (!extractedText.isNullOrEmpty()) {
+                smartAssistant.setPdfExtractedText(extractedText)
+                Log.d(TAG, "Using cached PDF text: ${extractedText.length} chars")
+            } else {
+                Log.d(TAG, "No cached PDF text found")
+            }
+
             binding.pdfView.visibility = View.VISIBLE
-            
-            // Show page navigation controls
             binding.pdfPrevPage?.visibility = View.VISIBLE
             binding.pdfNextPage?.visibility = View.VISIBLE
             binding.pdfPageIndicator?.visibility = View.VISIBLE
-            
+
             binding.pdfView.fromFile(file)
                 .enableSwipe(true)
                 .swipeHorizontal(false)
@@ -498,26 +509,28 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
                     binding.pdfPageIndicator?.text = "${page + 1}/${binding.pdfView.pageCount}"
                 }
                 .load()
-            
+
             binding.pdfPageIndicator?.text = "1/${binding.pdfView.pageCount}"
-            
+
             binding.pdfPrevPage?.setOnClickListener { prevPdfPage() }
             binding.pdfNextPage?.setOnClickListener { nextPdfPage() }
-            
+
             Log.d(TAG, "PDF loaded successfully: ${binding.pdfView.pageCount} pages")
         } catch (e: Exception) {
-            Log.e(TAG, "Error displaying local PDF: ${e.message}")
-            tryExternalPdfViewer(file.absolutePath)
+            Log.e(TAG, "Error opening PDF: ${e.message}")
+            tryExternalPdfViewer(pdfPath)
         }
     }
-    
+
+    private var savedLesson: JSONObject? = null
+
     private fun prevPdfPage() {
         val currentPage = binding.pdfView.currentPage
         if (currentPage > 0) {
             binding.pdfView.jumpTo(currentPage - 1)
         }
     }
-    
+
     private fun nextPdfPage() {
         val totalPages = binding.pdfView.pageCount
         val currentPage = binding.pdfView.currentPage
@@ -595,7 +608,28 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
     
     private fun loadLessonData() {
         var lesson: com.edu.student.domain.model.Lesson? = null
-        
+
+        val savedLessons = LessonStorage.loadAllLessons(this)
+        val savedLesson = savedLessons.find { it.optString("id") == lessonId }
+
+        if (savedLesson != null) {
+            currentLesson = gson.fromJson(savedLesson.toString(), com.edu.student.domain.model.Lesson::class.java)
+
+            val imagesArray = savedLesson.optJSONArray("images")
+            if (imagesArray != null && lessonImages.isEmpty()) {
+                lessonImages = (0 until imagesArray.length()).map { imagesArray.getString(it) }
+            }
+            if (lessonPdfPath.isNullOrEmpty()) {
+                lessonPdfPath = savedLesson.optString("localPdfPath", "")
+            }
+            if (lessonVideoPath.isNullOrEmpty()) {
+                lessonVideoPath = savedLesson.optString("localVideoPath", "")
+            }
+
+            Log.d(TAG, "Loaded lesson from storage - images: ${lessonImages.size}")
+            displayAttachments()
+        }
+
         // Try to get lesson from repository (cached lessons)
         val lessons = repository.getSubjects()
             .find { it.id == subjectId }?.lessons ?: emptyList()

@@ -25,6 +25,7 @@ class SmartAssistant(private val context: Context) {
     private var isTtsInitialized = false
     private var lessonContext: String = ""
     private var lessonTitle: String = ""
+    private var pdfExtractedText: String = ""
     
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady
@@ -78,14 +79,42 @@ class SmartAssistant(private val context: Context) {
         Log.d(TAG, "Lesson context set: ${text.length} characters")
     }
     
+    fun setPdfExtractedText(text: String) {
+        pdfExtractedText = text
+        Log.e(TAG, "PDF text set: ${text.length} chars")
+    }
+    
+    private fun getFullContext(): String {
+        return buildString {
+            if (lessonContext.isNotEmpty()) {
+                append("محتوى الدرس:\n")
+                append(lessonContext)
+                append("\n\n")
+            }
+            if (pdfExtractedText.isNotEmpty()) {
+                append("نص PDF المستخرج:\n")
+                append(pdfExtractedText)
+                append("\n\n")
+            }
+        }
+    }
+    
     suspend fun loadLessonFromPdf(pdfFile: File, title: String): String = withContext(Dispatchers.IO) {
         _extractedText.value = ""
         
+        Log.e(TAG, "Loading PDF: ${pdfFile.absolutePath}")
+        
         val text = PdfTextExtractor.extractTextFromPdf(pdfFile) { current, total ->
-            Log.d(TAG, "PDF extraction progress: $current/$total")
+            Log.e(TAG, "PDF progress: $current/$total")
         }
         
-        setLessonContext(title, text)
+        if (text.isNotEmpty()) {
+            setLessonContext(title, text)
+            Log.e(TAG, "PDF loaded: ${text.length} chars")
+        } else {
+            Log.e(TAG, "PDF extraction failed - no text")
+        }
+        
         text
     }
     
@@ -114,10 +143,13 @@ class SmartAssistant(private val context: Context) {
     
     suspend fun askQuestion(question: String): String = withContext(Dispatchers.IO) {
         try {
+            val fullContext = getFullContext()
+            Log.e(TAG, "Full context size: ${fullContext.length} chars")
+            
             val prompt = buildString {
-                if (lessonContext.isNotEmpty()) {
-                    append("أنت مساعد تعليمي ذكي. أجب عن السؤال التالي بناءً على محتوى الدرس.\n\n")
-                    append("محتوى الدرس:\n$lessonContext\n\n")
+                append("أنت مساعد تعليمي ذكي. أجب عن السؤال التالي بناءً على المحتوى المتاح.\n\n")
+                if (fullContext.isNotEmpty()) {
+                    append("المحتوى:\n$fullContext\n\n")
                 }
                 append("سؤال الطالب: $question\n\n")
                 append("أجب بشكل مختصر ومفيد:")

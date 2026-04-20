@@ -21,10 +21,15 @@ object PdfTextExtractor {
         var document: PDDocument? = null
         
         return@withContext try {
+            Log.e(TAG, "=== EXTRACTING PDF ===")
+            Log.e(TAG, "File: ${pdfFile.absolutePath}")
+            Log.e(TAG, "File exists: ${pdfFile.exists()}")
+            Log.e(TAG, "File size: ${pdfFile.length()} bytes")
+            
             document = PDDocument.load(pdfFile)
             val pageCount = document.numberOfPages
             
-            Log.d(TAG, "Extracting text from $pageCount pages using PdfBox")
+            Log.e(TAG, "PDF loaded: $pageCount pages")
             onProgress?.invoke(0, pageCount)
             
             val stripper = PDFTextStripper()
@@ -33,7 +38,7 @@ object PdfTextExtractor {
             
             val text = stripper.getText(document)
             
-            Log.d(TAG, "Extracted ${text.length} characters from PDF")
+            Log.e(TAG, "Extracted ${text.length} characters from PDF")
             onProgress?.invoke(pageCount, pageCount)
             
             text.trim()

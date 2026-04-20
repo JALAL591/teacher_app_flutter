@@ -13,6 +13,9 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
+import com.edu.student.data.LessonStorage
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
@@ -446,13 +449,13 @@ class TeacherClient(private val context: Context) {
             Log.d(TAG, "pdfData present: ${lessonJson.optString("pdfData", "").isNotEmpty()}")
             
             saveMediaFromLesson(lessonJson)
-            
+
             Log.d(TAG, "After saveMediaFromLesson:")
             Log.d(TAG, "  imagePath: ${lessonJson.optString("imagePath", "NOT SET")}")
             Log.d(TAG, "  videoPath: ${lessonJson.optString("videoPath", "NOT SET")}")
             Log.d(TAG, "  pdfPath: ${lessonJson.optString("pdfPath", "NOT SET")}")
             Log.d(TAG, "  localImagePath: ${lessonJson.optString("localImagePath", "NOT SET")}")
-            
+
             attachments?.let { att ->
                 Log.d(TAG, "Processing attachments - images: ${att.images.size}, pdf: ${att.pdfPath}, video: ${att.videoPath}")
                 if (att.images.isNotEmpty()) {
@@ -461,16 +464,39 @@ class TeacherClient(private val context: Context) {
                     lessonJson.put("images", imagesArray)
                     Log.d(TAG, "Added ${att.images.size} images to lesson")
                 }
-                att.pdfPath?.let { 
+                att.pdfPath?.let {
                     lessonJson.put("pdfPath", it)
+                    lessonJson.put("localPdfPath", it)
                     Log.d(TAG, "Added PDF path: $it")
                 }
-                att.videoPath?.let { 
+                att.videoPath?.let {
                     lessonJson.put("videoPath", it)
+                    lessonJson.put("localVideoPath", it)
                     Log.d(TAG, "Added video path: $it")
                 }
             }
-            
+
+            var pdfPath = lessonJson.optString("localPdfPath", "")
+            if (pdfPath.isEmpty()) {
+                pdfPath = lessonJson.optString("pdfPath", "")
+            }
+
+            if (pdfPath.isNotEmpty()) {
+                Log.d(TAG, ">>> Attempting PDF text extraction for: $pdfPath")
+                val extractedText = extractPdfTextOnce(pdfPath)
+                if (extractedText.isNotEmpty()) {
+                    lessonJson.put("extractedText", extractedText)
+                    Log.d(TAG, ">>> PDF text extracted: ${extractedText.length} chars")
+                } else {
+                    Log.w(TAG, ">>> PDF text extraction returned EMPTY")
+                }
+            } else {
+                Log.w(TAG, ">>> No PDF path found in lesson")
+            }
+
+            LessonStorage.saveLesson(context, lessonJson)
+            Log.d(TAG, "Lesson saved to storage with media paths")
+
             val lesson = gson.fromJson(lessonJson.toString(), com.edu.student.domain.model.Lesson::class.java)
             Log.d(TAG, "=== PARSED LESSON ===")
             Log.d(TAG, "Title: ${lesson.title}")
@@ -524,6 +550,30 @@ class TeacherClient(private val context: Context) {
         }
     }
 
+    private fun extractPdfTextOnce(pdfPath: String): String {
+        Log.d(TAG, ">>> extractPdfTextOnce() called with: $pdfPath")
+        try {
+            val file = File(pdfPath)
+            if (!file.exists()) {
+                Log.w(TAG, "PDF file NOT FOUND: $pdfPath")
+                return ""
+            }
+
+            Log.d(TAG, "PDF file exists, size: ${file.length()} bytes, attempting extraction...")
+
+            val document = PDDocument.load(file)
+            val stripper = PDFTextStripper()
+            val text = stripper.getText(document)
+            document.close()
+            val result = text.trim()
+            Log.d(TAG, ">>> PDF text extracted: ${result.length} chars")
+            return result
+        } catch (e: Exception) {
+            Log.e(TAG, ">>> PDF text extraction FAILED: ${e.message}", e)
+            return ""
+        }
+    }
+
     private fun saveAttachments(attachmentsArray: JSONArray?): SavedAttachments {
         val images = mutableListOf<String>()
         var pdfPath: String? = null
@@ -559,7 +609,7 @@ class TeacherClient(private val context: Context) {
         return SavedAttachments(images, pdfPath, videoPath)
     }
 
-    private fun saveBase64Image(base64: String): String? {
+    private fun saveBase64Image(base64: String, lessonId: String = "", subjectId: String = "", classId: String = "", grade: String = "", section: String = ""): String? {
         return try {
             if (base64.length > MAX_IMAGE_SIZE * 2) {
                 Log.e(TAG, "Image too large: ${base64.length / 1024} KB")
@@ -567,9 +617,20 @@ class TeacherClient(private val context: Context) {
             }
             Log.d(TAG, "Saving image: ${base64.length / 1024} KB")
             val bytes = Base64.decode(base64, Base64.NO_WRAP)
-            val file = File(context.filesDir, "images/img_${System.currentTimeMillis()}.jpg")
+            
+            val file = if (lessonId.isNotEmpty() && subjectId.isNotEmpty()) {
+                val dir = com.edu.student.StudentApp.instance.getImagesDir(
+                    prefs.getAssignedTeacherId() ?: "",
+                    subjectId, classId, grade, section, lessonId
+                )
+                File(dir, "img_${System.currentTimeMillis()}.jpg")
+            } else {
+                File(context.filesDir, "images/img_${System.currentTimeMillis()}.jpg")
+            }
+            
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { it.write(bytes) }
+            Log.e(TAG, "Image saved: ${file.absolutePath}")
             file.absolutePath
         } catch (e: OutOfMemoryError) {
             Log.e(TAG, "OUT OF MEMORY saving image - too large")
@@ -580,7 +641,7 @@ class TeacherClient(private val context: Context) {
         }
     }
 
-    private fun saveBase64Pdf(base64: String, fileName: String): String? {
+private fun saveBase64Pdf(base64: String, fileName: String, lessonId: String = "", subjectId: String = "", classId: String = "", grade: String = "", section: String = ""): String? {
         return try {
             if (base64.length > MAX_PDF_SIZE * 2) {
                 Log.e(TAG, "PDF too large: ${base64.length / 1024} KB")
@@ -590,9 +651,20 @@ class TeacherClient(private val context: Context) {
             val bytes = Base64.decode(base64, Base64.NO_WRAP)
             val timestamp = System.currentTimeMillis()
             val safeFileName = fileName.replace(" ", "_")
-            val file = File(context.filesDir, "pdfs/${safeFileName}_$timestamp.pdf")
+            
+            val file = if (lessonId.isNotEmpty() && subjectId.isNotEmpty()) {
+                val dir = com.edu.student.StudentApp.instance.getPdfDir(
+                    prefs.getAssignedTeacherId() ?: "",
+                    subjectId, classId, grade, section, lessonId
+                )
+                File(dir, "${safeFileName}_$timestamp.pdf")
+            } else {
+                File(context.filesDir, "pdfs/${safeFileName}_$timestamp.pdf")
+            }
+            
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { it.write(bytes) }
+            Log.e(TAG, "PDF saved: ${file.absolutePath}")
             file.absolutePath
         } catch (e: OutOfMemoryError) {
             Log.e(TAG, "OUT OF MEMORY saving PDF - too large")
@@ -602,8 +674,8 @@ class TeacherClient(private val context: Context) {
             null
         }
     }
-
-    private fun saveBase64Video(base64: String, fileName: String): String? {
+    
+    private fun saveBase64Video(base64: String, fileName: String, lessonId: String = "", subjectId: String = "", classId: String = "", grade: String = "", section: String = ""): String? {
         return try {
             if (base64.length > MAX_VIDEO_SIZE * 2) {
                 Log.e(TAG, "Video too large: ${base64.length / 1024} KB")
@@ -613,9 +685,20 @@ class TeacherClient(private val context: Context) {
             val bytes = Base64.decode(base64, Base64.NO_WRAP)
             val timestamp = System.currentTimeMillis()
             val safeFileName = fileName.replace(" ", "_")
-            val file = File(context.filesDir, "videos/${safeFileName}_$timestamp.mp4")
+            
+            val file = if (lessonId.isNotEmpty() && subjectId.isNotEmpty()) {
+                val dir = com.edu.student.StudentApp.instance.getVideoDir(
+                    prefs.getAssignedTeacherId() ?: "",
+                    subjectId, classId, grade, section, lessonId
+                )
+                File(dir, "${safeFileName}_$timestamp.mp4")
+            } else {
+                File(context.filesDir, "videos/${safeFileName}_$timestamp.mp4")
+            }
+            
             file.parentFile?.mkdirs()
             FileOutputStream(file).use { it.write(bytes) }
+            Log.e(TAG, "Video saved: ${file.absolutePath}")
             file.absolutePath
         } catch (e: OutOfMemoryError) {
             Log.e(TAG, "OUT OF MEMORY saving video - too large")
@@ -631,13 +714,29 @@ class TeacherClient(private val context: Context) {
     private suspend fun processLessonsArray(lessonsJson: JSONArray) {
         try {
             val teacherId = prefs.getAssignedTeacherId() ?: ""
-            
+
             val lessons = mutableListOf<com.edu.student.domain.model.Lesson>()
             for (i in 0 until lessonsJson.length()) {
                 try {
                     val lessonJson = JSONObject(lessonsJson.getJSONObject(i).toString())
                     if (isLessonForThisStudent(lessonJson)) {
                         saveMediaFromLesson(lessonJson)
+
+                        var pdfPath = lessonJson.optString("localPdfPath", "")
+                        if (pdfPath.isEmpty()) {
+                            pdfPath = lessonJson.optString("pdfPath", "")
+                        }
+
+                        if (pdfPath.isNotEmpty()) {
+                            val extractedText = extractPdfTextOnce(pdfPath)
+                            if (extractedText.isNotEmpty()) {
+                                lessonJson.put("extractedText", extractedText)
+                                Log.d(TAG, "PDF text extracted: ${extractedText.length} chars")
+                            }
+                        }
+
+                        LessonStorage.saveLesson(context, lessonJson)
+
                         val lesson = gson.fromJson(lessonJson.toString(), com.edu.student.domain.model.Lesson::class.java)
                         lessons.add(lesson)
                     }
@@ -645,7 +744,7 @@ class TeacherClient(private val context: Context) {
                     Log.e(TAG, "Error parsing lesson at index $i")
                 }
             }
-            
+
             if (lessons.isNotEmpty() && isRunning) {
                 prefs.saveCachedLessons(teacherId, lessonsJson.toString())
                 Log.d(TAG, "Received ${lessons.size} filtered lessons")
@@ -674,7 +773,7 @@ class TeacherClient(private val context: Context) {
     private suspend fun processLesson(lesson: com.edu.student.domain.model.Lesson, attachments: SavedAttachments? = null) {
         try {
             Log.d(TAG, "Processing lesson: ${lesson.title}")
-            
+
             val teacherId = prefs.getAssignedTeacherId() ?: ""
             val cached = prefs.getCachedLessons(teacherId)
             val lessons = if (cached != null) {
@@ -683,7 +782,7 @@ class TeacherClient(private val context: Context) {
                     gson.fromJson<MutableList<com.edu.student.domain.model.Lesson>>(cached, type)
                 } catch (e: Exception) { mutableListOf() }
             } else { mutableListOf() }
-            
+
             val existingIndex = lessons.indexOfFirst { it.id == lesson.id }
             if (existingIndex >= 0) {
                 lessons[existingIndex] = lesson
@@ -693,7 +792,40 @@ class TeacherClient(private val context: Context) {
             }
             prefs.saveCachedLessons(teacherId, gson.toJson(lessons))
             Log.d(TAG, "Lesson saved to cache - images: ${lesson.images?.size}, pdfPath: ${lesson.pdfPath}, videoPath: ${lesson.videoPath}")
-            
+
+            val lessonJson = JSONObject(gson.toJson(lesson))
+            attachments?.let { att ->
+                if (att.images.isNotEmpty()) {
+                    lessonJson.put("images", JSONArray(att.images))
+                }
+                att.pdfPath?.let {
+                    lessonJson.put("pdfPath", it)
+                    lessonJson.put("localPdfPath", it)
+                }
+                att.videoPath?.let {
+                    lessonJson.put("videoPath", it)
+                    lessonJson.put("localVideoPath", it)
+                }
+            }
+            var pdfPath = lessonJson.optString("localPdfPath", "")
+            if (pdfPath.isEmpty()) {
+                pdfPath = lessonJson.optString("pdfPath", "")
+            }
+
+            if (pdfPath.isNotEmpty()) {
+                Log.d(TAG, ">>> Attempting PDF text extraction for: $pdfPath")
+                val extractedText = extractPdfTextOnce(pdfPath)
+                if (extractedText.isNotEmpty()) {
+                    lessonJson.put("extractedText", extractedText)
+                    Log.d(TAG, ">>> PDF text extracted: ${extractedText.length} chars")
+                } else {
+                    Log.w(TAG, ">>> PDF text extraction returned EMPTY")
+                }
+            }
+
+            LessonStorage.saveLesson(context, lessonJson)
+            Log.d(TAG, "Lesson saved to storage with media paths")
+
             if (isRunning) {
                 safeEmitCallback { callback?.onLessonsReceived(listOf(lesson)) }
                 safeEmit("lesson_broadcast", mapOf("lesson" to lesson, "attachments" to (attachments ?: SavedAttachments())))

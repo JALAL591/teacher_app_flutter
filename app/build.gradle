@@ -41,7 +41,15 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.aar', '*.jar'])
+
+    implementation files('libs/android-pdf-viewer.aar')
+    implementation files('libs/pdfium-android-1.9.0.aar')
+    implementation files('libs/pdfbox-android.aar')
+    implementation files('libs/fontbox.jar')
+    implementation files('libs/whispercpp-1.4.0.jar')
+
     
+
     // Media3 ExoPlayer - أحدث إصدار
     implementation 'androidx.media3:media3-exoplayer:1.4.1'
     implementation 'androidx.media3:media3-ui:1.4.1'

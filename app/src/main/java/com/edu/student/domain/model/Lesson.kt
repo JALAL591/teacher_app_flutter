@@ -9,7 +9,7 @@ data class Lesson(
     val videoUrl: String? = null,
     val pdfUrl: String? = null,
     val pdfBase64: String? = null,
-    val image: String? = null,
+    var image: String? = null,
     val subjectId: String = "",
     val subjectTitle: String = "",
     val classId: String = "",
@@ -18,9 +18,9 @@ data class Lesson(
     val questions: List<Question> = emptyList(),
     val isPublished: Boolean = true,
     val createdAt: String = "",
-    val images: List<String>? = null,
-    val pdfPath: String? = null,
-    val videoPath: String? = null
+    var images: List<String>? = null,
+    var pdfPath: String? = null,
+    var videoPath: String? = null
 )
 
 data class HomeworkSubmission(

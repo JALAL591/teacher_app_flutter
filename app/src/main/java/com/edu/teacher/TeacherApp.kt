@@ -57,6 +57,14 @@ class TeacherApp : Application() {
     override fun onCreate() {
         super.onCreate()
         _instance = this
+
+        try {
+            com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
+            android.util.Log.d("TeacherApp", "PDFBox initialized successfully")
+        } catch (e: Exception) {
+            android.util.Log.e("TeacherApp", "PDFBox init failed: ${e.message}")
+        }
+
         syncTheme()
         
         createMediaDirectories()
@@ -78,6 +86,100 @@ class TeacherApp : Application() {
                 file.mkdirs()
                 android.util.Log.d("TeacherApp", "Created $dir directory: ${file.absolutePath}")
             }
+        }
+    }
+    
+    fun getLessonMediaDir(
+        teacherId: String,
+        subjectId: String,
+        classId: String,
+        grade: String,
+        section: String,
+        lessonId: String
+    ): java.io.File {
+        val path = "lessons/$teacherId/$subjectId/$classId/${grade}_$section/$lessonId"
+        val dir = java.io.File(filesDir, path)
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return dir
+    }
+    
+    fun getImagesDir(
+        teacherId: String,
+        subjectId: String,
+        classId: String,
+        grade: String,
+        section: String,
+        lessonId: String
+    ): java.io.File {
+        val dir = java.io.File(
+            getLessonMediaDir(teacherId, subjectId, classId, grade, section, lessonId),
+            "images"
+        )
+        dir.mkdirs()
+        return dir
+    }
+    
+    fun getVideoDir(
+        teacherId: String,
+        subjectId: String,
+        classId: String,
+        grade: String,
+        section: String,
+        lessonId: String
+    ): java.io.File {
+        val dir = java.io.File(
+            getLessonMediaDir(teacherId, subjectId, classId, grade, section, lessonId),
+            "video"
+        )
+        dir.mkdirs()
+        return dir
+    }
+    
+    fun getPdfDir(
+        teacherId: String,
+        subjectId: String,
+        classId: String,
+        grade: String,
+        section: String,
+        lessonId: String
+    ): java.io.File {
+        val dir = java.io.File(
+            getLessonMediaDir(teacherId, subjectId, classId, grade, section, lessonId),
+            "pdf"
+        )
+        dir.mkdirs()
+        return dir
+    }
+    
+    fun deleteLessonMedia(
+        teacherId: String,
+        subjectId: String,
+        classId: String,
+        grade: String,
+        section: String,
+        lessonId: String
+    ) {
+        val dir = getLessonMediaDir(teacherId, subjectId, classId, grade, section, lessonId)
+        if (dir.exists()) {
+            dir.deleteRecursively()
+            android.util.Log.d("TeacherApp", "Deleted lesson media: $lessonId")
+        }
+    }
+    
+    fun deleteClassMedia(
+        teacherId: String,
+        subjectId: String,
+        classId: String,
+        grade: String,
+        section: String
+    ) {
+        val path = "lessons/$teacherId/$subjectId/$classId/${grade}_$section"
+        val dir = java.io.File(filesDir, path)
+        if (dir.exists()) {
+            dir.deleteRecursively()
+            android.util.Log.d("TeacherApp", "Deleted class media: ${grade}_$section")
         }
     }
 }

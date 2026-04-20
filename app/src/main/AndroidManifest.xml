@@ -26,6 +26,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     
+    <!-- Microphone Permission (for voice AI) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    
     <!-- Location Permissions (Required for WiFi scanning) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

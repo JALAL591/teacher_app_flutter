@@ -6,7 +6,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.edu.teacher.R
 import com.edu.teacher.databinding.StudentActivityVideoPlayerBinding
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -60,7 +59,10 @@ class VideoPlayerActivity : AppCompatActivity() {
         player = ExoPlayer.Builder(this).build().also { exoPlayer ->
             binding.playerView.player = exoPlayer
 
-            val mediaItem = MediaItem.fromUri(Uri.fromFile(videoFile))
+            android.util.Log.d("VideoPlayer", "Loading video from: ${videoFile.absolutePath}")
+
+            val uri = Uri.parse("file://${videoFile.absolutePath}")
+            val mediaItem = MediaItem.fromUri(uri)
 
             exoPlayer.setMediaItem(mediaItem)
             exoPlayer.playWhenReady = playWhenReady
@@ -69,6 +71,7 @@ class VideoPlayerActivity : AppCompatActivity() {
 
             exoPlayer.addListener(object : Player.Listener {
                 override fun onPlayerError(error: PlaybackException) {
+                    android.util.Log.e("VideoPlayer", "ExoPlayer error: ${error.errorCode} - ${error.message}")
                     showError("فشل تشغيل الفيديو: ${error.message}")
                 }
 
@@ -84,7 +87,6 @@ class VideoPlayerActivity : AppCompatActivity() {
     private fun showError(message: String) {
         android.util.Log.e("VideoPlayer", message)
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-        finish()
     }
 
     override fun onPause() {

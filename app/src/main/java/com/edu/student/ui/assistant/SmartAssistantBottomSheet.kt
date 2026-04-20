@@ -184,8 +184,14 @@ class SmartAssistantBottomSheet : BottomSheetDialogFragment() {
             context: Context,
             smartAssistant: SmartAssistant,
             lessonTitle: String = "",
-            lessonContent: String = ""
+            lessonContent: String = "",
+            pdfExtractedText: String = ""
         ) {
+            smartAssistant.setLessonContext(lessonTitle, lessonContent)
+            if (pdfExtractedText.isNotEmpty()) {
+                smartAssistant.setPdfExtractedText(pdfExtractedText)
+            }
+            
             val bottomSheet = SmartAssistantBottomSheet().apply {
                 this.lessonTitle = lessonTitle
                 this.lessonContent = lessonContent
