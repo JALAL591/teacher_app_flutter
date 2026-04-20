@@ -31,6 +31,7 @@ import com.edu.student.ui.common.ImageAdapter
 import com.edu.student.ui.common.QuestionAdapter
 import com.edu.student.ai.SmartAssistant
 import com.edu.student.ui.assistant.SmartAssistantBottomSheet
+import com.edu.student.utils.PdfTextExtractor
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
 import kotlinx.coroutines.*
@@ -92,6 +93,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
         tts = TextToSpeech(this, this)
         
         initSmartAssistant()
+        PdfTextExtractor.initTesseract(this)
         extractIntentData()
         setupViews()
         loadBroadcastAttachments()
@@ -315,6 +317,51 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             }
         } else {
             binding.pdfCard.visibility = View.GONE
+        }
+        
+        if (!lessonPdfPath.isNullOrEmpty()) {
+            binding.extractTextButton.visibility = View.VISIBLE
+            setupExtractTextButton()
+        }
+    }
+    
+    private fun setupExtractTextButton() {
+        binding.extractTextButton.setOnClickListener {
+            val pdfPath = lessonPdfPath
+            if (pdfPath.isNullOrEmpty()) {
+                Toast.makeText(this, "لا يوجد PDF مرفق", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            binding.extractTextButton.isEnabled = false
+            binding.extractTextButton.text = "جاري الاستخراج..."
+            
+            scope.launch(Dispatchers.Main) {
+                try {
+                    val pdfFile = File(pdfPath)
+                    val extractedText = PdfTextExtractor.extractTextFromPdf(pdfFile) { current, total ->
+                        binding.extractTextButton.text = "جاري الاستخراج... $current/$total"
+                    }
+                    
+                    if (extractedText.isNotEmpty()) {
+                        smartAssistant.setPdfExtractedText(extractedText)
+                        Toast.makeText(this@LessonActivity, 
+                            "تم استخراج ${extractedText.length} حرف", 
+                            Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@LessonActivity, 
+                            "لم يتم استخراج أي نص", 
+                            Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(this@LessonActivity, 
+                        "فشل الاستخراج: ${e.message}", 
+                        Toast.LENGTH_SHORT).show()
+                } finally {
+                    binding.extractTextButton.isEnabled = true
+                    binding.extractTextButton.text = "استخراج النص"
+                }
+            }
         }
     }
     
@@ -572,21 +619,7 @@ class LessonActivity : AppCompatActivity(), TextToSpeech.OnInitListener, Teacher
             startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Error playing video: ${e.message}")
-            try {
-                val uri = FileProvider.getUriForFile(this, "${packageName}.provider", File(videoPath))
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, "video/*")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                
-                if (intent.resolveActivity(packageManager) != null) {
-                    startActivity(intent)
-                } else {
-                    Toast.makeText(this, "لا يوجد تطبيق لتشغيل الفيديو", Toast.LENGTH_LONG).show()
-                }
-            } catch (e2: Exception) {
-                Toast.makeText(this, "خطأ في تشغيل الفيديو: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(this, "فشل تشغيل الفيديو: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
     

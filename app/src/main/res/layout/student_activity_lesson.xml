@@ -287,7 +287,7 @@
                         <com.github.barteksc.pdfviewer.PDFView
                             android:id="@+id/pdfView"
                             android:layout_width="match_parent"
-                            android:layout_height="400dp"
+                            android:layout_height="500dp"
                             android:layout_marginTop="12dp"
                             android:visibility="gone" />
 
@@ -322,6 +322,18 @@
                                 android:src="@drawable/ic_arrow_left"
                                 app:tint="@color/indigo_400" />
                         </LinearLayout>
+
+                        <Button
+                            android:id="@+id/extractTextButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:backgroundTint="@color/indigo_600"
+                            android:text="استخراج النص"
+                            android:textColor="@android:color/white"
+                            android:textSize="12sp"
+                            android:visibility="gone"
+                            app:cornerRadius="8dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

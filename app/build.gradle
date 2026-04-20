@@ -48,6 +48,9 @@ dependencies {
     implementation files('libs/fontbox.jar')
     implementation files('libs/whispercpp-1.4.0.jar')
 
+    // Tesseract OCR
+    implementation files('libs/tess-two.aar')
+
     
 
     // Media3 ExoPlayer - أحدث إصدار
