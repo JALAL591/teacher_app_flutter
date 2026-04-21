@@ -83,6 +83,18 @@
 
     <!-- Glass border (for circle/oval shapes) -->
     <color name="glass_border">#33FFFFFF</color>
+    <color name="glass_bg_light">#CC1E293B</color>
+    <color name="glass_bg_medium">#E61E293B</color>
+    <color name="glass_bg_dark">#CC0F172A</color>
+    <color name="glass_bg_blue">#CC6366F1</color>
+    <color name="glass_bg_blue_dark">#E6438CAA</color>
+    <color name="glass_border_light">#661E293B</color>
+    <color name="glass_border_medium">#4D1E293B</color>
+    <color name="glass_border_dark">#330F172A</color>
+    <color name="glass_border_accent">#806366F1</color>
+    <color name="glass_shadow_light">#0A000000</color>
+    <color name="glass_shadow_medium">#14000000</color>
+    <color name="glass_shadow_dark">#1A000000</color>
 
     <!-- Avatar colors -->
     <color name="avatar_yellow">#3A3520</color>
@@ -136,8 +148,11 @@
     <color name="teal_700">#2DD4BF</color>
 
     <!-- Primary (MD3) -->
+    <color name="primary">#6366F1</color>
     <color name="primary_blue">#818CF8</color>
     <color name="primary_dark">#6366F1</color>
+    <color name="outline">#475569</color>
+    <color name="indigo_500">#6366F1</color>
 
     <!-- Primary Container Dark -->
     <color name="indigo_900">#312E81</color>

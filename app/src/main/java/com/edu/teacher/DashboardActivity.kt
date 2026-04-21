@@ -187,6 +187,7 @@ class DashboardActivity : BaseActivity() {
             
             binding.root.postDelayed({
                 updateThemeToggleIcon()
+                recreate()
             }, 100)
         }
         binding.settingsButton.setOnClickListener {

@@ -25,6 +25,7 @@ class StudentPreferences(context: Context) {
         private const val KEY_REMEMBER_ME = "remember_me"
         private const val KEY_SAVED_USER_ID = "saved_user_id"
         private const val KEY_SAVED_PASSWORD = "saved_password"
+        private const val KEY_AVATAR_PATH = "avatar_path"
     }
     
     // ==================== Login State ====================
@@ -131,6 +132,12 @@ class StudentPreferences(context: Context) {
     
     fun setTheme(theme: String) {
         prefs.edit().putString(KEY_THEME, theme).apply()
+    }
+    
+    fun getAvatarPath(): String? = prefs.getString(KEY_AVATAR_PATH, null)
+    
+    fun setAvatarPath(path: String) {
+        prefs.edit().putString(KEY_AVATAR_PATH, path).apply()
     }
     
     fun getTeacherIP(): String? = prefs.getString(KEY_TEACHER_IP, null)

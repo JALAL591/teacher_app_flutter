@@ -1,6 +1,7 @@
 package com.edu.student.ui.dashboard
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
@@ -10,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.R
 import com.edu.teacher.databinding.*
 import com.edu.student.StudentApp
+import com.edu.student.data.preferences.StudentPreferences
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.domain.model.Subject
 import com.edu.student.services.TeacherClient
@@ -21,6 +23,7 @@ import com.edu.student.ui.stats.StatsActivity
 import com.edu.student.ui.subject.SubjectActivity
 import com.edu.student.utils.PermissionHelper
 import kotlinx.coroutines.*
+import java.io.File
 
 class DashboardActivity : AppCompatActivity(), TeacherClient.ClientCallback {
     
@@ -88,6 +91,9 @@ setupViews()
         binding.welcomeText.text = "Welcome ${student?.name ?: "Student"}!"
         binding.studentIdText.text = student?.id ?: ""
         
+        // Load avatar
+        loadStudentAvatar()
+        
         updateStats()
         
         binding.statsCard.setOnClickListener {
@@ -118,6 +124,22 @@ setupViews()
         
         binding.starsCount.text = stats.stars.toString()
         binding.levelCount.text = stats.level.toString()
+    }
+    
+    private fun loadStudentAvatar() {
+        try {
+            val prefs = StudentPreferences(this)
+            val avatarPath = prefs.getAvatarPath()
+            if (avatarPath != null) {
+                val avatarFile = File(avatarPath)
+                if (avatarFile.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(avatarPath)
+                    binding.studentAvatar.setImageBitmap(bitmap)
+                }
+            }
+        } catch (e: Exception) {
+            // Use default avatar
+        }
         
         val subjects = repository.getSubjects()
         binding.subjectsCount.text = subjects.size.toString()

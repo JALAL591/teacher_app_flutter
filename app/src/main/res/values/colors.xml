@@ -178,9 +178,9 @@
     <color name="main_surface_variant">#F8FAFC</color>
 
     <!-- Text Colors -->
-    <color name="text_primary">#1E293B</color>
-    <color name="text_secondary">#64748B</color>
-    <color name="text_hint">#94A3B8</color>
+    <color name="text_primary">#000000</color>
+    <color name="text_secondary">#333333</color>
+    <color name="text_hint">#666666</color>
     <color name="text_on_primary">#FFFFFF</color>
 
     <!-- Icon Colors -->

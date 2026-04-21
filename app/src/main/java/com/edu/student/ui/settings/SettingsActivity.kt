@@ -26,6 +26,8 @@ import com.edu.student.ui.dashboard.DashboardActivity
 import com.edu.student.ui.login.ActivationActivity
 import com.edu.student.ui.stats.StatsActivity
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
 class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
 
@@ -81,6 +83,9 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
 
     private fun setupViews() {
         binding.backButton.setOnClickListener { finish() }
+        
+        updateThemeUI()
+        loadAvatarFromStorage()
 
         binding.themeButton.setOnClickListener {
             toggleTheme()
@@ -113,7 +118,11 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
 
         binding.themeSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (StudentApp.isInitialized()) {
-                StudentApp.toggleTheme(isChecked)
+                val currentMode = StudentApp.isDarkMode()
+                if (currentMode != isChecked) {
+                    StudentApp.toggleTheme(isChecked)
+                    recreate()
+                }
             }
         }
 
@@ -158,15 +167,7 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             binding.sectionSpinner.setSelection(sectionIndex)
         }
 
-        if (student.avatar?.isNotEmpty() == true) {
-            try {
-                val bytes = Base64.decode(student.avatar, Base64.DEFAULT)
-                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                binding.avatarImage.setImageBitmap(bitmap)
-                binding.avatarImage.visibility = View.VISIBLE
-                binding.avatarPlaceholder.visibility = View.GONE
-            } catch (e: Exception) { }
-        }
+        loadAvatarFromStorage()
 
         binding.themeSwitch.isChecked = 
             if (StudentApp.isInitialized()) StudentApp.isDarkMode() else false
@@ -293,27 +294,100 @@ class SettingsActivity : AppCompatActivity(), TeacherClient.ClientCallback {
             val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
             inputStream?.close()
 
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, outputStream)
-            val byteArray = outputStream.toByteArray()
-            val avatarBase64 = Base64.encodeToString(byteArray, Base64.DEFAULT)
+            // Save to internal storage
+            val avatarFile = File(filesDir, "avatar.jpg")
+            val outputStream = FileOutputStream(avatarFile)
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, outputStream)
+            outputStream.close()
 
+            // Save path to preferences
+            prefs.setAvatarPath(avatarFile.absolutePath)
+
+            // Update student
             val student = repository.getStudent()
             if (student != null) {
-                repository.updateStudent(student.copy(avatar = avatarBase64))
+                repository.updateStudent(student.copy(avatar = avatarFile.absolutePath))
             }
 
             binding.avatarImage.setImageBitmap(bitmap)
             binding.avatarImage.visibility = View.VISIBLE
             binding.avatarPlaceholder.visibility = View.GONE
+
+            // Notify other activities to reload
+            setResult(RESULT_OK)
         } catch (e: Exception) {
             Toast.makeText(this, "فشل تحميل الصورة", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun toggleTheme() {
-        val isDark = repository.getTheme() == "dark"
-        repository.setTheme(if (isDark) "light" else "dark")
+        if (StudentApp.isInitialized()) {
+            val isDark = StudentApp.isDarkMode()
+            StudentApp.toggleTheme(!isDark)
+            updateThemeUI()
+            recreate()
+        } else {
+            val isDark = repository.getTheme() == "dark"
+            repository.setTheme(if (isDark) "light" else "dark")
+            recreate()
+        }
+    }
+    
+    private fun updateThemeUI() {
+        try {
+            val isDark = StudentApp.isDarkMode()
+            binding.themeButton.setImageResource(
+                if (isDark) com.edu.teacher.R.drawable.ic_sun 
+                else com.edu.teacher.R.drawable.ic_moon
+            )
+            binding.themeSwitch.setOnCheckedChangeListener(null)
+            binding.themeSwitch.isChecked = isDark
+            binding.themeSwitch.setOnCheckedChangeListener { _, isChecked ->
+                if (StudentApp.isInitialized()) {
+                    val currentMode = StudentApp.isDarkMode()
+                    if (currentMode != isChecked) {
+                        StudentApp.toggleTheme(isChecked)
+                        recreate()
+                    }
+                }
+            }
+        } catch (e: Exception) { 
+            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun loadAvatarFromStorage() {
+        try {
+            val prefs = StudentPreferences(this)
+            val savedPath = prefs.getAvatarPath()
+            if (savedPath != null) {
+                val file = File(savedPath)
+                if (file.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(savedPath)
+                    binding.avatarImage.setImageBitmap(bitmap)
+                    binding.avatarImage.visibility = View.VISIBLE
+                    binding.avatarPlaceholder.visibility = View.GONE
+                    return
+                }
+            }
+            
+            val student = repository.getStudent()
+            if (student?.avatar?.isNotEmpty() == true) {
+                val avatarFile = File(student.avatar)
+                if (avatarFile.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(student.avatar)
+                    binding.avatarImage.setImageBitmap(bitmap)
+                    binding.avatarImage.visibility = View.VISIBLE
+                    binding.avatarPlaceholder.visibility = View.GONE
+                } else {
+                    val bytes = Base64.decode(student.avatar, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    binding.avatarImage.setImageBitmap(bitmap)
+                    binding.avatarImage.visibility = View.VISIBLE
+                    binding.avatarPlaceholder.visibility = View.GONE
+                }
+            }
+        } catch (e: Exception) { }
     }
 
     private fun logout() {

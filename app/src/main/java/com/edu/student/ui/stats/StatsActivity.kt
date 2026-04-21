@@ -1,6 +1,7 @@
 package com.edu.student.ui.stats
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -10,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.edu.teacher.R
 import com.edu.teacher.databinding.*
 import com.edu.student.StudentApp
+import com.edu.student.data.preferences.StudentPreferences
 import com.edu.student.data.repository.StudentRepository
 import com.edu.student.services.TeacherClient
 import com.edu.student.ai.SmartAssistant
@@ -18,6 +20,7 @@ import com.edu.student.ui.common.SubjectProgressAdapter
 import com.edu.student.ui.dashboard.DashboardActivity
 import com.edu.student.ui.settings.SettingsActivity
 import com.edu.student.ui.subject.SubjectActivity
+import java.io.File
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -80,6 +83,8 @@ class StatsActivity : AppCompatActivity() {
     
     private fun setupViews() {
         binding.backButton.setOnClickListener { finish() }
+        
+        loadStudentAvatar()
         
         binding.bottomNav.setOnItemSelectedListener { position ->
             when (position) {
@@ -147,6 +152,22 @@ class StatsActivity : AppCompatActivity() {
             binding.submitAllButton.visibility = View.GONE
         } else {
             binding.homeworkEmptyView.visibility = View.GONE
+        }
+    }
+    
+    private fun loadStudentAvatar() {
+        try {
+            val prefs = StudentPreferences(this)
+            val avatarPath = prefs.getAvatarPath()
+            if (avatarPath != null) {
+                val avatarFile = File(avatarPath)
+                if (avatarFile.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(avatarPath)
+                    binding.studentAvatar.setImageBitmap(bitmap)
+                }
+            }
+        } catch (e: Exception) {
+            // Use default avatar
             binding.homeworkRecycler.visibility = View.VISIBLE
             binding.submitAllButton.visibility = View.VISIBLE
             
